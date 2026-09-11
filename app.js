@@ -81,6 +81,8 @@ let activeDocId = "doc_1";
 let activeFolderId = null;
 let activeView = "editor";
 let isBatchDeleteMode = false;
+let batchSelectedFolders = new Set();
+let batchSelectedDocs = new Set();
 let iconPickerContext = { type: null, id: null };
 let moveFolderTargetId = null;
 let connectingSourceNodeId = null;
@@ -112,7 +114,25 @@ window.addEventListener("DOMContentLoaded", function() {
   setupCanvasEvents();
   setupGlobalClickDismiss();
   setupDirectoryContextMenu();
+  setupDeleteKeyShortcut();
 });
+
+/* Delete 鍵刪除目前選取的資料夾／文檔 */
+function setupDeleteKeyShortcut() {
+  document.addEventListener("keydown", function(e) {
+    if (e.key !== "Delete") return;
+
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+    if (isBatchDeleteMode) return; // 批量模式改用下方「刪除選取項」按鈕
+
+    if (activeFolderId) {
+      deleteFolderById(activeFolderId);
+    } else if (activeDocId) {
+      deleteCurrentDocument();
+    }
+  });
+}
 
 function toggleSidebarMenu() {
   const isMobile = window.innerWidth <= 768;
@@ -232,16 +252,23 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       e.dataTransfer.setData("text/plain", JSON.stringify({ type: "folder", id: folder.id }));
     };
 
+    // 批量刪除模式下以「選取列」取代 checkbox
+    if (batchSelectedFolders.has(folder.id)) folderRow.classList.add("batch-checked");
+
     // 類 Windows 點擊邏輯：單擊整列僅選取，不展開/收合
     folderRow.onclick = function(e) {
-      if (e.target.closest('.node-checkbox') || e.target.closest('.folder-caret')) return;
+      if (e.target.closest('.folder-caret')) return;
+      if (isBatchDeleteMode) {
+        toggleBatchItemSelection('folder', folder.id);
+        return;
+      }
       activeFolderId = folder.id;
       renderSidebarTree();
     };
 
     // 類 Windows 雙擊邏輯：雙擊整列切換展開/收合
     folderRow.ondblclick = function(e) {
-      if (e.target.closest('.node-checkbox')) return;
+      if (isBatchDeleteMode) return;
       collapsedFolders[folder.id] = !collapsedFolders[folder.id];
       renderSidebarTree();
     };
@@ -251,7 +278,6 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
 
     folderRow.innerHTML = 
       '<div class="node-left">' +
-        '<input type="checkbox" class="node-checkbox" data-type="folder" data-id="' + folder.id + '" onclick="event.stopPropagation()">' +
         '<span class="folder-caret" style="cursor:' + (hasChildren ? 'pointer' : 'default') + ';">' + toggleCaret + '</span>' +
         '<span class="node-icon" onclick="event.stopPropagation(); openIconPicker(\'folder\', \'' + folder.id + '\')">' + (folder.icon || '📁') + '</span>' +
         '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
@@ -349,12 +375,17 @@ function isDescendantOf(parentCheckId, targetFolderId) {
 function createDocRowElement(doc) {
   const row = document.createElement("div");
   row.className = "node-row " + (doc.id === activeDocId ? "active" : "");
+  if (batchSelectedDocs.has(doc.id)) row.classList.add("batch-checked");
   row.draggable = true;
   row.ondragstart = function(e) {
     e.stopPropagation();
     e.dataTransfer.setData("text/plain", JSON.stringify({ type: "doc", id: doc.id }));
   };
   row.onclick = function() {
+    if (isBatchDeleteMode) {
+      toggleBatchItemSelection('doc', doc.id);
+      return;
+    }
     activeWorldId = doc.worldId;
     activeFolderId = null;
     updateWorldBadge();
@@ -367,7 +398,6 @@ function createDocRowElement(doc) {
 
   row.innerHTML = 
     '<div class="node-left">' +
-      '<input type="checkbox" class="node-checkbox" data-type="doc" data-id="' + doc.id + '" onclick="event.stopPropagation()">' +
       '<span class="node-icon" onclick="event.stopPropagation(); openIconPicker(\'doc\', \'' + doc.id + '\')">' + (doc.icon || '📄') + '</span>' +
       '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
     '</div>' +
@@ -416,16 +446,16 @@ function renderBreadcrumb() {
     const sep = document.createElement("span");
     sep.className = "breadcrumb-sep";
     sep.textContent = "›";
+    sep.style.cursor = "pointer";
+    sep.onclick = function(e) {
+      e.stopPropagation();
+      navigateToBreadcrumbFolder(folder);
+    };
     bar.appendChild(sep);
 
     bar.appendChild(createBreadcrumbDropdownItem(
       (folder.icon || '📁') + " " + folder.name,
-      function() {
-        activeWorldId = folder.worldId;
-        activeFolderId = folder.id;
-        delete collapsedFolders[folder.id];
-        renderSidebarTree();
-      },
+      function() { navigateToBreadcrumbFolder(folder); },
       getWorldChildOptions(folder.worldId, folder.id)
     ));
   });
@@ -441,6 +471,23 @@ function renderBreadcrumb() {
   docItem.style.color = "var(--accent)";
   docItem.textContent = (doc.icon || '📄') + " " + (doc.title || "無標題文檔");
   bar.appendChild(docItem);
+}
+
+/* 點擊麵包屑中的資料夾（含名稱與其後的「›」分隔符）→ 直接回到該資料夾 */
+function navigateToBreadcrumbFolder(folder) {
+  activeWorldId = folder.worldId;
+  activeFolderId = folder.id;
+  delete collapsedFolders[folder.id];
+  updateWorldBadge();
+  renderSidebarTree();
+
+  if (window.innerWidth <= 768) {
+    document.getElementById("appSidebar").classList.add("drawer-open");
+    document.getElementById("sidebarOverlay").classList.add("active");
+  }
+
+  const selectedRow = document.querySelector(".node-row.selected");
+  if (selectedRow) selectedRow.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function getWorldChildOptions(worldId, parentId) {
@@ -698,6 +745,15 @@ function promptCreateWorldview() {
     updateWorldBadge();
     renderSidebarTree();
   }
+}
+
+/* 目錄工具欄的「新增資料夾／新增文檔」按鈕：
+   若目前已選取某個資料夾，直接新增在該資料夾底下；否則新增在根目錄 */
+function createFolderInCurrentContext() {
+  promptCreateFolder(activeFolderId || null, activeWorldId);
+}
+function createDocInCurrentContext() {
+  createNewDoc(activeFolderId || null, activeWorldId);
 }
 
 function promptCreateFolder(parentId = null, worldId = null) {
@@ -1223,27 +1279,53 @@ function setupCanvasEvents() {
    ========================================================== */
 function toggleBatchDeleteMode() {
   isBatchDeleteMode = !isBatchDeleteMode;
+  if (!isBatchDeleteMode) {
+    batchSelectedFolders.clear();
+    batchSelectedDocs.clear();
+  }
   document.getElementById("batchActionBar").classList.toggle("active", isBatchDeleteMode);
   document.getElementById("appSidebar").classList.toggle("batch-mode", isBatchDeleteMode);
+  updateBatchBarCount();
+  renderSidebarTree();
+}
+
+function toggleBatchItemSelection(type, id) {
+  const set = type === "folder" ? batchSelectedFolders : batchSelectedDocs;
+  if (set.has(id)) set.delete(id);
+  else set.add(id);
+  updateBatchBarCount();
+  renderSidebarTree();
+}
+
+function updateBatchBarCount() {
+  const el = document.getElementById("batchSelectedCountText");
+  if (!el) return;
+  const count = batchSelectedFolders.size + batchSelectedDocs.size;
+  el.textContent = count > 0 ? ("已選取 " + count + " 項") : "批量刪除模式：點選項目以選取";
 }
 
 function executeBatchDelete() {
-  const checkedBoxes = document.querySelectorAll(".node-checkbox:checked");
-  if (checkedBoxes.length === 0) {
-    alert("請先勾選欲刪除的項目！");
+  const totalCount = batchSelectedFolders.size + batchSelectedDocs.size;
+  if (totalCount === 0) {
+    alert("請先點選欲刪除的項目！");
     return;
   }
-  if (!confirm("確定要刪除選取的 " + checkedBoxes.length + " 個項目嗎？")) return;
 
-  const docIdsToDelete = [];
-  const folderIdsToDelete = [];
+  const names = [];
+  const folderIdsToDelete = Array.from(batchSelectedFolders);
+  const docIdsToDelete = Array.from(batchSelectedDocs);
 
-  checkedBoxes.forEach(function(cb) {
-    const type = cb.getAttribute("data-type");
-    const id = cb.getAttribute("data-id");
-    if (type === "doc") docIdsToDelete.push(id);
-    else if (type === "folder") folderIdsToDelete.push(id);
+  folderIdsToDelete.forEach(function(id) {
+    const f = appData.folders.find(x => x.id === id);
+    if (f) names.push("📁 " + f.name);
   });
+  docIdsToDelete.forEach(function(id) {
+    const d = appData.docs.find(x => x.id === id);
+    if (d) names.push("📄 " + (d.title || "無標題文檔"));
+  });
+
+  const confirmMsg = "確定要刪除選取的 " + totalCount + " 個項目嗎？\n\n" + names.join("\n");
+  if (!confirm(confirmMsg)) return;
 
   appData.folders = appData.folders.filter(f => !folderIdsToDelete.includes(f.id));
   appData.docs = appData.docs.filter(d => !docIdsToDelete.includes(d.id));
