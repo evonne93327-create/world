@@ -115,10 +115,10 @@ window.addEventListener("DOMContentLoaded", function() {
   setupGlobalClickDismiss();
   setupDirectoryContextMenu();
   setupDeleteKeyShortcut();
-  setupHistoryNavigation(); // 支援瀏覽器與手機返回鍵
+  setupHistoryNavigation();
 });
 
-/* 支援瀏覽器與手機返回鍵 (History API) */
+/* 返回鍵支援：返回時關閉側邊欄或回到編輯器 */
 function setupHistoryNavigation() {
   if (!history.state) {
     history.replaceState({ view: 'editor', drawer: false }, "");
@@ -128,19 +128,16 @@ function setupHistoryNavigation() {
     const sidebar = document.getElementById("appSidebar");
     const isDrawerOpen = sidebar && sidebar.classList.contains("drawer-open");
 
-    // 1. 若側邊欄打開，返回鍵優先關閉側邊欄
     if (isDrawerOpen) {
       closeSidebarMobile();
       return;
     }
 
-    // 2. 若當前在白板，返回鍵退回文檔視圖
     if (activeView === 'canvas') {
       switchView('editor', false);
       return;
     }
 
-    // 3. 若有彈窗打開，返回鍵關閉彈窗
     const activeModal = document.querySelector(".modal-overlay.active");
     if (activeModal) {
       activeModal.classList.remove("active");
@@ -149,14 +146,13 @@ function setupHistoryNavigation() {
   });
 }
 
-/* Delete 鍵刪除目前選取的資料夾／文檔 */
 function setupDeleteKeyShortcut() {
   document.addEventListener("keydown", function(e) {
     if (e.key !== "Delete") return;
 
     const tag = (e.target.tagName || "").toLowerCase();
     if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
-    if (isBatchDeleteMode) return; // 批量模式改用下方「刪除選取項」按鈕
+    if (isBatchDeleteMode) return;
 
     if (activeFolderId) {
       deleteFolderById(activeFolderId);
@@ -173,8 +169,9 @@ function toggleSidebarMenu() {
 
   if (isMobile) {
     const isOpen = sidebar.classList.contains("drawer-open");
-    if (isOpen) closeSidebarMobile();
-    else {
+    if (isOpen) {
+      closeSidebarMobile();
+    } else {
       sidebar.classList.add("drawer-open");
       overlay.classList.add("active");
       history.pushState({ drawer: true }, "");
@@ -200,9 +197,6 @@ function updateWorldBadge() {
   renderWorldRail();
 }
 
-/* ==========================================================
-   搜尋欄控制
-   ========================================================== */
 function handleSearchInput(inputEl) {
   const clearBtn = document.getElementById("searchClearBtn");
   if (inputEl.value.trim().length > 0) {
@@ -222,9 +216,6 @@ function clearSearchInput() {
   inputEl.focus();
 }
 
-/* ==========================================================
-   世界觀清單渲染
-   ========================================================== */
 function renderWorldRail() {
   const container = document.getElementById("worldRailContainer");
   if (!container) return;
@@ -250,7 +241,7 @@ function renderWorldRail() {
 }
 
 /* ==========================================================
-   3. 類 Windows 樹狀目錄渲染
+   3. 樹狀目錄渲染
    ========================================================== */
 function renderSidebarTree() {
   const container = document.getElementById("worldTreeContainer");
@@ -287,7 +278,6 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
 
     if (batchSelectedFolders.has(folder.id)) folderRow.classList.add("batch-checked");
 
-    // 類 Windows 點擊邏輯：單擊整列僅選取，不展開/收合
     folderRow.onclick = function(e) {
       if (e.target.closest('.folder-caret')) return;
       if (isBatchDeleteMode) {
@@ -298,7 +288,6 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       renderSidebarTree();
     };
 
-    // 類 Windows 雙擊邏輯：雙擊整列切換展開/收合
     folderRow.ondblclick = function(e) {
       if (isBatchDeleteMode) return;
       collapsedFolders[folder.id] = !collapsedFolders[folder.id];
@@ -325,7 +314,6 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
 
     attachContextMenu(folderRow, function() { return buildFolderMenuItems(folder); }, function() { return (folder.icon || '📁') + ' ' + folder.name; });
 
-    // 拖曳放置處理
     folderRow.ondragover = function(e) { e.preventDefault(); folderRow.style.background = "#E0E7FF"; };
     folderRow.ondragleave = function() { folderRow.style.background = ""; };
     folderRow.ondrop = function(e) {
@@ -439,7 +427,7 @@ function createDocRowElement(doc) {
 }
 
 /* ==========================================================
-   4. 類 Windows 麵包屑導航 (支援點擊資料夾與 > 直接返回資料夾)
+   4. 麵包屑導航 (點擊資料夾與「›」直接打開目錄並選取)
    ========================================================== */
 function renderBreadcrumb() {
   const bar = document.getElementById("docBreadcrumbBar");
@@ -450,7 +438,6 @@ function renderBreadcrumb() {
 
   const world = appData.worldviews.find(w => w.id === doc.worldId) || { id: "w_main", name: "主世界觀", icon: "🌐" };
 
-  // 世界觀麵包屑節點
   bar.appendChild(createBreadcrumbDropdownItem(
     (world.icon || '🌐') + " " + world.name,
     function() {
@@ -462,7 +449,6 @@ function renderBreadcrumb() {
     getWorldChildOptions(world.id, null)
   ));
 
-  // 資料夾鏈
   const folderChain = [];
   let curFolderId = doc.folderId;
   while (curFolderId) {
@@ -474,7 +460,7 @@ function renderBreadcrumb() {
   }
 
   folderChain.forEach(function(folder) {
-    // 類 Windows 分隔符「›」可點擊跳轉回到該資料夾
+    // 類 Windows 分隔符「›」可點擊跳轉回該資料夾
     const sep = document.createElement("span");
     sep.className = "breadcrumb-sep";
     sep.textContent = "›";
@@ -493,7 +479,6 @@ function renderBreadcrumb() {
     ));
   });
 
-  // 當前文檔節點
   const sepDoc = document.createElement("span");
   sepDoc.className = "breadcrumb-sep";
   sepDoc.textContent = "›";
@@ -506,12 +491,12 @@ function renderBreadcrumb() {
   bar.appendChild(docItem);
 }
 
-/* 點擊麵包屑中的資料夾（含名稱與其後的「›」分隔符）→ 直接展開並回到該資料夾 */
+/* 點擊麵包屑中的資料夾或「›」：打開目錄、展開路徑、選取目標 */
 function navigateToBreadcrumbFolder(folder) {
   activeWorldId = folder.worldId;
   activeFolderId = folder.id;
 
-  // 確保目標資料夾與其所有祖先資料夾皆處於展開狀態
+  // 展開此資料夾及其所有上層資料夾
   let cur = folder;
   while (cur) {
     delete collapsedFolders[cur.id];
@@ -521,7 +506,7 @@ function navigateToBreadcrumbFolder(folder) {
   updateWorldBadge();
   renderSidebarTree();
 
-  // 若在手機螢幕下，自動滑出目錄欄
+  // 若在手機螢幕下，自動打開目錄欄抽屜
   if (window.innerWidth <= 768) {
     const sidebar = document.getElementById("appSidebar");
     const overlay = document.getElementById("sidebarOverlay");
@@ -532,7 +517,7 @@ function navigateToBreadcrumbFolder(folder) {
     }
   }
 
-  // 滾動定位到選取的資料夾列
+  // 自動平滑滾動到目標資料夾列
   requestAnimationFrame(() => {
     const selectedRow = document.querySelector(".node-row.selected");
     if (selectedRow) selectedRow.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1079,7 +1064,7 @@ function deleteDocById(docId) {
 
 /* ==========================================================
    7. 白板與圖片
-   ========================================================= */
+   ========================================================== */
 function handleImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
