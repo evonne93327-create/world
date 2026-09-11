@@ -111,6 +111,7 @@ window.addEventListener("DOMContentLoaded", function() {
   if (activeDocId) loadDocToEditor(activeDocId);
   setupCanvasEvents();
   setupGlobalClickDismiss();
+  setupDirectoryContextMenu();
 });
 
 function toggleSidebarMenu() {
@@ -190,7 +191,7 @@ function renderWorldRail() {
       if (activeView === 'canvas') renderCanvas();
     };
 
-    setupRenameTriggers(btn, 'world', world.id, function() { return world.name; });
+    attachContextMenu(btn, function() { return buildWorldMenuItems(world); }, function() { return (world.icon || '🌐') + ' ' + world.name; });
     container.appendChild(btn);
   });
 }
@@ -265,7 +266,7 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       };
     }
 
-    setupRenameTriggers(folderRow.querySelector('.node-name'), 'folder', folder.id, function() { return folder.name; });
+    attachContextMenu(folderRow, function() { return buildFolderMenuItems(folder); }, function() { return (folder.icon || '📁') + ' ' + folder.name; });
 
     // 拖曳放置處理
     folderRow.ondragover = function(e) { e.preventDefault(); folderRow.style.background = "#E0E7FF"; };
@@ -372,7 +373,7 @@ function createDocRowElement(doc) {
     '</div>' +
     '<div style="font-size:10px; color:var(--text-muted);">' + (doc.wordCount || 0) + '字</div>';
 
-  setupRenameTriggers(row.querySelector('.node-name'), 'doc', doc.id, function() { return doc.title || ''; });
+  attachContextMenu(row, function() { return buildDocMenuItems(doc); }, function() { return (doc.icon || '📄') + ' ' + (doc.title || '無標題文檔'); });
   return row;
 }
 
@@ -762,12 +763,222 @@ function promptRenameItem(type, id, currentName) {
   }
 }
 
-function setupRenameTriggers(element, type, id, getNameFn) {
+/* ==========================================================
+   6.5 右鍵／長按 自訂選單系統
+   桌面：右鍵在滑鼠處開啟浮動選單
+   手機：長按（約 480ms）在底部滑出操作選單，並輕微震動回饋
+   ========================================================== */
+function showContextMenu(e, items, title) {
+  if (e && e.preventDefault) e.preventDefault();
+  if (e && e.stopPropagation) e.stopPropagation();
+
+  const menu = document.getElementById("customContextMenu");
+  const overlay = document.getElementById("ctxMenuOverlay");
+  if (!menu || !overlay) return;
+  menu.innerHTML = "";
+
+  if (title) {
+    const head = document.createElement("div");
+    head.className = "ctx-menu-title";
+    head.textContent = title;
+    menu.appendChild(head);
+  }
+
+  items.forEach(function(item) {
+    if (item.type === "divider") {
+      const div = document.createElement("div");
+      div.className = "ctx-menu-divider";
+      menu.appendChild(div);
+      return;
+    }
+    const el = document.createElement("div");
+    el.className = "ctx-menu-item" + (item.danger ? " danger" : "");
+    el.innerHTML = '<span class="ctx-menu-icon">' + (item.icon || "") + '</span><span>' + escapeHtml(item.label) + '</span>';
+    el.onclick = function(ev) {
+      ev.stopPropagation();
+      closeContextMenu();
+      item.action();
+    };
+    menu.appendChild(el);
+  });
+
+  overlay.classList.add("active");
+  menu.classList.add("active");
+
+  const isMobile = window.innerWidth <= 768;
+  if (!isMobile) {
+    const point = (e && e.touches && e.touches[0]) || (e && e.changedTouches && e.changedTouches[0]) || e || { clientX: 40, clientY: 40 };
+    const x = point.clientX;
+    const y = point.clientY;
+    menu.style.left = "-9999px";
+    menu.style.top = "-9999px";
+    requestAnimationFrame(function() {
+      const rect = menu.getBoundingClientRect();
+      let left = x, top = y;
+      if (left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
+      if (top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8;
+      menu.style.left = Math.max(8, left) + "px";
+      menu.style.top = Math.max(8, top) + "px";
+    });
+  } else {
+    menu.style.left = "";
+    menu.style.top = "";
+  }
+}
+
+function closeContextMenu() {
+  const menu = document.getElementById("customContextMenu");
+  const overlay = document.getElementById("ctxMenuOverlay");
+  if (menu) menu.classList.remove("active");
+  if (overlay) overlay.classList.remove("active");
+}
+
+// 將右鍵（桌面）與長按（手機/觸控裝置）事件掛載到指定元素上
+function attachContextMenu(element, itemsFn, titleFn) {
+  if (!element) return;
+
   element.addEventListener("contextmenu", function(e) {
     e.preventDefault();
     e.stopPropagation();
-    promptRenameItem(type, id, getNameFn());
+    showContextMenu(e, itemsFn(), titleFn ? titleFn() : null);
   });
+
+  let pressTimer = null;
+  let longPressTriggered = false;
+  let startX = 0, startY = 0;
+
+  element.addEventListener("touchstart", function(e) {
+    if (e.touches.length !== 1) return;
+    e.stopPropagation();
+    longPressTriggered = false;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    pressTimer = setTimeout(function() {
+      longPressTriggered = true;
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) {} }
+      showContextMenu(e, itemsFn(), titleFn ? titleFn() : null);
+    }, 480);
+  }, { passive: true });
+
+  element.addEventListener("touchmove", function(e) {
+    if (!pressTimer) return;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (dx > 10 || dy > 10) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+  }, { passive: true });
+
+  element.addEventListener("touchend", function(e) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+    if (longPressTriggered) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  element.addEventListener("touchcancel", function() {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  });
+}
+
+function setupDirectoryContextMenu() {
+  const overlay = document.getElementById("ctxMenuOverlay");
+  if (overlay) overlay.onclick = closeContextMenu;
+
+  // 在目錄空白處右鍵／長按：快速新增資料夾或文檔
+  attachContextMenu(document.getElementById("worldTreeContainer"), function() {
+    return [
+      { icon: "📁", label: "新增資料夾", action: function() { promptCreateFolder(null); } },
+      { icon: "📄", label: "新增文檔", action: function() { createNewDoc(null); } }
+    ];
+  }, function() { return "📂 目錄操作"; });
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") closeContextMenu();
+  });
+  window.addEventListener("resize", closeContextMenu);
+  document.addEventListener("scroll", closeContextMenu, true);
+}
+
+function buildWorldMenuItems(world) {
+  return [
+    { icon: "✏️", label: "重新命名", action: function() { promptRenameItem("world", world.id, world.name); } },
+    { icon: "🎨", label: "更換圖示", action: function() { openIconPicker("world", world.id); } },
+    { type: "divider" },
+    { icon: "📁", label: "新增資料夾", action: function() { promptCreateFolder(null, world.id); } },
+    { icon: "📄", label: "新增文檔", action: function() { createNewDoc(null, world.id); } }
+  ];
+}
+
+function buildFolderMenuItems(folder) {
+  return [
+    { icon: "✏️", label: "重新命名", action: function() { promptRenameItem("folder", folder.id, folder.name); } },
+    { icon: "🎨", label: "更換圖示", action: function() { openIconPicker("folder", folder.id); } },
+    { type: "divider" },
+    { icon: "📁", label: "新增子資料夾", action: function() { promptCreateFolder(folder.id, folder.worldId); } },
+    { icon: "📄", label: "新增文檔於此", action: function() { createNewDoc(folder.id, folder.worldId); } },
+    { type: "divider" },
+    { icon: "🔀", label: "移動資料夾", action: function() { promptMoveFolder(folder.id); } },
+    { icon: "🗑️", label: "刪除資料夾", danger: true, action: function() { deleteFolderById(folder.id); } }
+  ];
+}
+
+function buildDocMenuItems(doc) {
+  return [
+    { icon: "✏️", label: "重新命名", action: function() { promptRenameItem("doc", doc.id, doc.title || ""); } },
+    { icon: "🎨", label: "更換圖示", action: function() { openIconPicker("doc", doc.id); } },
+    { type: "divider" },
+    { icon: "🗑️", label: "刪除文檔", danger: true, action: function() { deleteDocById(doc.id); } }
+  ];
+}
+
+function deleteFolderById(folderId) {
+  if (!confirm("確定要刪除此資料夾嗎？（內含子資料夾與文檔也會一併刪除）")) return;
+
+  const idsToDelete = [folderId];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    appData.folders.forEach(function(f) {
+      if (idsToDelete.includes(f.parentId) && !idsToDelete.includes(f.id)) {
+        idsToDelete.push(f.id);
+        changed = true;
+      }
+    });
+  }
+
+  const willDeleteActiveDoc = appData.docs.some(d => d.id === activeDocId && idsToDelete.includes(d.folderId));
+
+  appData.docs = appData.docs.filter(d => !idsToDelete.includes(d.folderId));
+  appData.folders = appData.folders.filter(f => !idsToDelete.includes(f.id));
+
+  if (activeFolderId && idsToDelete.includes(activeFolderId)) activeFolderId = null;
+
+  saveData();
+  renderSidebarTree();
+
+  if (willDeleteActiveDoc || !appData.docs.find(d => d.id === activeDocId)) {
+    if (appData.docs.length > 0) loadDocToEditor(appData.docs[0].id);
+    else createNewDoc();
+  }
+}
+
+function deleteDocById(docId) {
+  if (!confirm("確定要刪除此文檔嗎？")) return;
+  const wasActive = docId === activeDocId;
+
+  appData.docs = appData.docs.filter(d => d.id !== docId);
+  saveData();
+  renderSidebarTree();
+
+  if (wasActive) {
+    if (appData.docs.length > 0) loadDocToEditor(appData.docs[0].id);
+    else createNewDoc();
+  }
 }
 
 /* ==========================================================
