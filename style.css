@@ -314,6 +314,11 @@ aside.sidebar-directory.collapsed {
   color: var(--accent-hover);
   font-weight: 600;
 }
+.node-row.batch-checked {
+  background: #FBE4E4;
+  border: 1px solid #E8AFAF;
+  color: #A23B3B;
+}
 .node-left {
   display: flex;
   align-items: center;
@@ -323,8 +328,6 @@ aside.sidebar-directory.collapsed {
   white-space: nowrap;
   flex: 1;
 }
-.node-checkbox { display: none; margin-right: 4px; }
-.batch-mode .node-checkbox { display: inline-block; }
 .folder-caret {
   font-size: 10px;
   color: var(--text-muted);
