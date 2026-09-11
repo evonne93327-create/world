@@ -618,29 +618,35 @@ aside.sidebar-directory.collapsed {
     display: none !important;
   }
 
-  /* 2. C（文檔／白板）移到 A（漢堡）右邊 */
+  /* 2. C（文檔／白板）移到 A（漢堡）右邊：
+        利用 order 與 flex，讓頂部導航列按順序排成：A -> C -> 匯出/新文檔 */
+  header.top-nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
   .nav-group-left {
     display: flex;
     align-items: center;
     gap: 8px;
+    order: 1;
   }
-  #btnC_TabSwitch {
-    position: static;
-    transform: none;
-    display: flex;
+  .nav-group-center {
+    order: 2;
+    margin-left: 8px;
+    margin-right: auto; /* 自動靠齊左側 A 的右邊 */
+  }
+  .nav-group-right {
+    order: 3;
   }
 
-  /* 3. 文檔／白板切換按鈕 → 只留 Icon 不留文字 */
-  .tab-btn .tab-text {
-    display: none !important;
-  }
+  /* 3. 文檔／白板切換按鈕 → 只留 Icon 不留文字
+        不改按鈕原本外框形狀與顏色，只隱藏文字節點並保留 emoji */
   .tab-btn {
+    font-size: 0 !important; /* 隱藏純文字 */
     padding: 6px 10px;
-    font-size: 14px;
   }
-
-  /* 麵包屑可點擊箭頭優化 */
-  .breadcrumb-sep {
-    padding: 2px 4px;
+  .tab-btn::first-letter {
+    font-size: 13px !important; /* 只把開頭的 Emoji 顯示出來 */
   }
 }
