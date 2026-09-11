@@ -17,25 +17,25 @@
     <div class="world-rail-list" id="worldRailContainer"></div>
   </aside>
 
-  <!-- 中間欄：頂格目錄工具欄 (完全貼齊最上方) -->
+  <!-- 中間欄：目錄欄 (頂格向上對齊) -->
   <aside class="sidebar-directory" id="appSidebar">
     <div class="directory-top-bar">
       <span class="directory-title">目錄工具欄</span>
       <div class="dir-btn-group">
         <button class="icon-sm-btn" id="trashToggleBtn" title="批量刪除模式" onclick="toggleBatchDeleteMode()">🗑️</button>
-        <button class="icon-sm-btn" title="新增資料夾（若已選取資料夾，將新增於其底下）" onclick="createFolderInCurrentContext()">📁</button>
-        <button class="icon-sm-btn" title="新增文檔（若已選取資料夾，將新增於其底下）" onclick="createDocInCurrentContext()">📄</button>
+        <button class="icon-sm-btn" title="新增資料夾" onclick="promptCreateFolder(null)">📁</button>
+        <button class="icon-sm-btn" title="新增文檔" onclick="createNewDoc(null)">📄</button>
         <button class="icon-sm-btn mobile-close" id="closeSidebarBtn" onclick="closeSidebarMobile()">✕</button>
       </div>
     </div>
 
-    <!-- 批量刪除列 -->
+    <!-- 批量刪除條 -->
     <div class="batch-bar" id="batchActionBar">
-      <span id="batchSelectedCountText">批量刪除模式：點選項目以選取</span>
+      <span>已進入批量刪除模式</span>
       <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="executeBatchDelete()">刪除選取項</button>
     </div>
 
-    <!-- Google 風格搜尋框 (無底色叉叉) -->
+    <!-- 搜尋框 -->
     <div class="search-wrap">
       <div class="search-box-inner">
         <span class="search-lens-icon">🔍</span>
@@ -44,10 +44,10 @@
       </div>
     </div>
 
-    <!-- 類 Windows 檔案樹狀目錄 -->
+    <!-- 類 Windows 樹狀目錄 -->
     <div class="directory-tree-area" id="worldTreeContainer"></div>
 
-    <!-- 底部設定按鈕 -->
+    <!-- 底部按鈕 -->
     <div class="directory-footer">
       <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="openPaletteModal()">🎨 標籤分類設定</button>
       <button class="btn btn-secondary" style="padding:6px 10px;" title="備份完整資料庫" onclick="exportFullDatabaseJSON()">💾 備份</button>
@@ -56,27 +56,36 @@
 
   <!-- 右側主區域 -->
   <div class="app-main-layout">
+    <!-- 頂部橫向導航列：A + C + B (手機隱藏B) | D + E -->
     <header class="top-nav-bar">
       <div class="nav-group-left">
+        <!-- A: 漢堡按鈕 -->
         <button class="nav-btn-icon" id="btnA_Hamburger" onclick="toggleSidebarMenu()" title="展開/收納目錄">☰</button>
+
+        <!-- C: 文檔／白板切換 (置於 A 右側) -->
+        <div class="tab-switch-box" id="btnC_TabSwitch">
+          <button class="tab-btn active" id="tabEditorBtn" onclick="switchView('editor')">
+            <span class="tab-icon">📝</span><span class="tab-text">文檔</span>
+          </button>
+          <button class="tab-btn" id="tabCanvasBtn" onclick="switchView('canvas')">
+            <span class="tab-icon">🕸️</span><span class="tab-text">白板</span>
+          </button>
+        </div>
+
+        <!-- B: 世界觀按鈕 (電腦版顯示，手機版隱藏) -->
         <button class="nav-world-btn" id="btnB_WorldBadge" onclick="openIconPicker('world', activeWorldId)" title="當前世界觀">
           <span id="currentWorldIcon">🌐</span>
           <span id="currentWorldName">主世界觀</span>
         </button>
       </div>
 
-      <div class="nav-group-center">
-        <div class="tab-switch-box" id="btnC_TabSwitch">
-          <button class="tab-btn active" id="tabEditorBtn" onclick="switchView('editor')">📝 文檔</button>
-          <button class="tab-btn" id="tabCanvasBtn" onclick="switchView('canvas')">🕸️ 白板</button>
-        </div>
-      </div>
-
       <div class="nav-group-right">
+        <!-- D: 匯出按鈕 -->
         <button class="nav-action-btn secondary" id="btnD_Export" onclick="openBatchExportModal()" title="批量匯出">
           <span>📤</span><span class="btn-text">匯出</span>
         </button>
-        <button class="nav-action-btn primary" id="btnE_NewDoc" onclick="createDocInCurrentContext()" title="新增文檔（若已選取資料夾，將新增於其底下）">
+        <!-- E: 新文檔按鈕 -->
+        <button class="nav-action-btn primary" id="btnE_NewDoc" onclick="createNewDoc(null)" title="新增文檔">
           <span>＋</span><span class="btn-text">新文檔</span>
         </button>
       </div>
@@ -87,19 +96,19 @@
       <section id="editorView" class="view-panel">
         <div class="editor-meta-panel">
           <div class="meta-left-col">
-            <!-- 類 Windows 導航麵包屑 -->
+            <!-- 麵包屑 (點擊可展開並選到該資料夾) -->
             <div class="breadcrumb-row" id="docBreadcrumbBar"></div>
-            
+
             <div class="doc-title-line">
               <button class="doc-icon-picker-btn" id="docIconBtn" title="更換圖示" onclick="openIconPicker('doc', activeDocId)">📄</button>
               <input type="text" id="docTitleInput" class="doc-title-input" placeholder="文檔標題..." oninput="onTitleChange()">
             </div>
-            
+
             <div class="doc-stats-line">
               <span>字數：<strong class="stat-pill" id="statWordCount">0</strong></span>
               <span>更新時間：<span id="statUpdatedAt">--</span></span>
             </div>
-            
+
             <div class="hashtag-wrap" id="liveTagToolbar"></div>
           </div>
 
@@ -171,7 +180,7 @@
     </div>
   </div>
 
-  <!-- 彈窗：標籤顏色功能自定義命名 -->
+  <!-- 彈窗：標籤顏色自定義 -->
   <div class="modal-overlay" id="paletteModal">
     <div class="modal-card">
       <div class="modal-title">🎨 標籤顏色功能自定義命名</div>
@@ -213,13 +222,7 @@
     </div>
   </div>
 
-  <!-- 標籤顏色快捷 Popover -->
   <div class="color-picker-popup" id="colorPickerPopover"></div>
-
-  <!-- 右鍵 / 長按 自訂選單（桌面浮動選單 / 手機底部選單） -->
-  <div class="ctx-menu-overlay" id="ctxMenuOverlay"></div>
-  <div class="ctx-menu" id="customContextMenu"></div>
-
   <script src="app.js"></script>
 </body>
 </html>
