@@ -215,6 +215,41 @@ function clearSearchInput() {
   inputEl.focus();
 }
 
+/* ==========================================================
+   世界觀切換：自動關閉上一世界觀文檔
+   ========================================================== */
+function selectWorld(worldId) {
+  if (activeWorldId === worldId) return;
+  activeWorldId = worldId;
+  activeFolderId = null;
+
+  // 切換世界觀時：關閉上一個世界觀的文檔
+  const docsInWorld = appData.docs.filter(d => d.worldId === worldId);
+  if (docsInWorld.length > 0) {
+    loadDocToEditor(docsInWorld[0].id);
+  } else {
+    // 若該世界觀沒有文檔，清空編輯器工作區
+    clearEditorWorkspace();
+  }
+
+  updateWorldBadge();
+  renderSidebarTree();
+  if (activeView === 'canvas') renderCanvas();
+}
+
+function clearEditorWorkspace() {
+  activeDocId = null;
+  document.getElementById("docIconBtn").textContent = "📄";
+  document.getElementById("docTitleInput").value = "";
+  document.getElementById("docContentInput").value = "";
+  document.getElementById("statWordCount").textContent = "0";
+  document.getElementById("statUpdatedAt").textContent = "--";
+  document.getElementById("liveTagToolbar").innerHTML = "";
+  document.getElementById("docImagesContainer").innerHTML = "";
+  document.getElementById("tocCard").style.display = "none";
+  document.getElementById("docBreadcrumbBar").innerHTML = '<span class="breadcrumb-item" style="color:var(--text-muted);">（目前世界觀尚無文件）</span>';
+}
+
 function renderWorldRail() {
   const container = document.getElementById("worldRailContainer");
   if (!container) return;
@@ -227,11 +262,7 @@ function renderWorldRail() {
     btn.innerHTML = world.icon || "🌐";
 
     btn.onclick = function() {
-      activeWorldId = world.id;
-      activeFolderId = null;
-      updateWorldBadge();
-      renderSidebarTree();
-      if (activeView === 'canvas') renderCanvas();
+      selectWorld(world.id);
     };
 
     attachContextMenu(btn, function() { return buildWorldMenuItems(world); }, function() { return (world.icon || '🌐') + ' ' + world.name; });
@@ -240,7 +271,7 @@ function renderWorldRail() {
 }
 
 /* ==========================================================
-   3. 樹狀目錄渲染
+   3. 樹狀目錄渲染 (徹底杜絕任何不可勾選 Checkbox)
    ========================================================== */
 function renderSidebarTree() {
   const container = document.getElementById("worldTreeContainer");
@@ -275,10 +306,12 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       e.dataTransfer.setData("text/plain", JSON.stringify({ type: "folder", id: folder.id }));
     };
 
-    if (batchSelectedFolders.has(folder.id)) folderRow.classList.add("batch-checked");
+    if (isBatchDeleteMode && batchSelectedFolders.has(folder.id)) {
+      folderRow.classList.add("batch-checked");
+    }
 
     folderRow.onclick = function(e) {
-      if (e.target.closest('.folder-caret')) return;
+      if (e.target.closest('.folder-caret') || e.target.closest('.node-icon')) return;
       if (isBatchDeleteMode) {
         toggleBatchItemSelection('folder', folder.id);
         return;
@@ -296,19 +329,31 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
     const hasChildren = folderHasChildren(folder.id);
     const toggleCaret = !hasChildren ? '' : (isCollapsed ? '▸' : '▾');
 
+    // 乾淨的 DOM 結構：完全不輸出 checkbox
     folderRow.innerHTML = 
       '<div class="node-left">' +
         '<span class="folder-caret" style="cursor:' + (hasChildren ? 'pointer' : 'default') + ';">' + toggleCaret + '</span>' +
-        '<span class="node-icon" onclick="event.stopPropagation(); openIconPicker(\'folder\', \'' + folder.id + '\')">' + (folder.icon || '📁') + '</span>' +
+        '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
         '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
       '</div>';
 
-    if (hasChildren) {
-      folderRow.querySelector('.folder-caret').onclick = function(e) {
-        e.stopPropagation();
-        collapsedFolders[folder.id] = !collapsedFolders[folder.id];
-        renderSidebarTree();
+    const iconSpan = folderRow.querySelector('.node-icon');
+    if (iconSpan) {
+      iconSpan.onclick = function(ev) {
+        ev.stopPropagation();
+        openIconPicker('folder', folder.id);
       };
+    }
+
+    if (hasChildren) {
+      const caretSpan = folderRow.querySelector('.folder-caret');
+      if (caretSpan) {
+        caretSpan.onclick = function(e) {
+          e.stopPropagation();
+          collapsedFolders[folder.id] = !collapsedFolders[folder.id];
+          renderSidebarTree();
+        };
+      }
     }
 
     attachContextMenu(folderRow, function() { return buildFolderMenuItems(folder); }, function() { return (folder.icon || '📁') + ' ' + folder.name; });
@@ -393,13 +438,16 @@ function isDescendantOf(parentCheckId, targetFolderId) {
 function createDocRowElement(doc) {
   const row = document.createElement("div");
   row.className = "node-row " + (doc.id === activeDocId ? "active" : "");
-  if (batchSelectedDocs.has(doc.id)) row.classList.add("batch-checked");
+  if (isBatchDeleteMode && batchSelectedDocs.has(doc.id)) {
+    row.classList.add("batch-checked");
+  }
   row.draggable = true;
   row.ondragstart = function(e) {
     e.stopPropagation();
     e.dataTransfer.setData("text/plain", JSON.stringify({ type: "doc", id: doc.id }));
   };
-  row.onclick = function() {
+  row.onclick = function(e) {
+    if (e.target.closest('.node-icon')) return;
     if (isBatchDeleteMode) {
       toggleBatchItemSelection('doc', doc.id);
       return;
@@ -416,24 +464,35 @@ function createDocRowElement(doc) {
 
   row.innerHTML = 
     '<div class="node-left">' +
-      '<span class="node-icon" onclick="event.stopPropagation(); openIconPicker(\'doc\', \'' + doc.id + '\')">' + (doc.icon || '📄') + '</span>' +
+      '<span class="node-icon">' + (doc.icon || '📄') + '</span>' +
       '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
     '</div>' +
     '<div style="font-size:10px; color:var(--text-muted);">' + (doc.wordCount || 0) + '字</div>';
+
+  const iconSpan = row.querySelector('.node-icon');
+  if (iconSpan) {
+    iconSpan.onclick = function(ev) {
+      ev.stopPropagation();
+      openIconPicker('doc', doc.id);
+    };
+  }
 
   attachContextMenu(row, function() { return buildDocMenuItems(doc); }, function() { return (doc.icon || '📄') + ' ' + (doc.title || '無標題文檔'); });
   return row;
 }
 
 /* ==========================================================
-   4. 麵包屑導航 (支援點擊資料夾與「›」直接打開目錄並選取)
+   4. 麵包屑導航 (點擊資料夾與「›」直接打開目錄並選取)
    ========================================================== */
 function renderBreadcrumb() {
   const bar = document.getElementById("docBreadcrumbBar");
   bar.innerHTML = "";
 
   const doc = appData.docs.find(d => d.id === activeDocId);
-  if (!doc) return;
+  if (!doc) {
+    bar.innerHTML = '<span class="breadcrumb-item" style="color:var(--text-muted);">（無已選文檔）</span>';
+    return;
+  }
 
   const world = appData.worldviews.find(w => w.id === doc.worldId) || { id: "w_main", name: "主世界觀", icon: "🌐" };
 
@@ -765,10 +824,8 @@ function promptCreateWorldview() {
       canvas: { nodes: [], edges: [] }
     };
     appData.worldviews.push(newWorld);
-    activeWorldId = newWorld.id;
+    selectWorld(newWorld.id);
     saveData();
-    updateWorldBadge();
-    renderSidebarTree();
   }
 }
 
@@ -1037,8 +1094,9 @@ function deleteFolderById(folderId) {
   renderSidebarTree();
 
   if (willDeleteActiveDoc || !appData.docs.find(d => d.id === activeDocId)) {
-    if (appData.docs.length > 0) loadDocToEditor(appData.docs[0].id);
-    else createNewDoc();
+    const remainingDocsInWorld = appData.docs.filter(d => d.worldId === activeWorldId);
+    if (remainingDocsInWorld.length > 0) loadDocToEditor(remainingDocsInWorld[0].id);
+    else clearEditorWorkspace();
   }
 }
 
@@ -1051,8 +1109,9 @@ function deleteDocById(docId) {
   renderSidebarTree();
 
   if (wasActive) {
-    if (appData.docs.length > 0) loadDocToEditor(appData.docs[0].id);
-    else createNewDoc();
+    const remainingDocsInWorld = appData.docs.filter(d => d.worldId === activeWorldId);
+    if (remainingDocsInWorld.length > 0) loadDocToEditor(remainingDocsInWorld[0].id);
+    else clearEditorWorkspace();
   }
 }
 
@@ -1108,7 +1167,10 @@ function getCurrentWorldCanvas() {
 
 function addCurrentDocToCanvas() {
   const currentDoc = appData.docs.find(d => d.id === activeDocId);
-  if (!currentDoc) return;
+  if (!currentDoc) {
+    alert("請先選擇或開啟一個文檔！");
+    return;
+  }
 
   const canvas = getCurrentWorldCanvas();
   const exists = canvas.nodes.find(n => n.docId === currentDoc.id);
@@ -1354,8 +1416,9 @@ function executeBatchDelete() {
   renderSidebarTree();
 
   if (docIdsToDelete.includes(activeDocId)) {
-    if (appData.docs.length > 0) loadDocToEditor(appData.docs[0].id);
-    else createNewDoc();
+    const remainingDocsInWorld = appData.docs.filter(d => d.worldId === activeWorldId);
+    if (remainingDocsInWorld.length > 0) loadDocToEditor(remainingDocsInWorld[0].id);
+    else clearEditorWorkspace();
   }
 }
 
@@ -1368,8 +1431,9 @@ function deleteCurrentDocument() {
   saveData();
   renderSidebarTree();
 
-  if (appData.docs.length > 0) loadDocToEditor(appData.docs[0].id);
-  else createNewDoc();
+  const remainingDocsInWorld = appData.docs.filter(d => d.worldId === activeWorldId);
+  if (remainingDocsInWorld.length > 0) loadDocToEditor(remainingDocsInWorld[0].id);
+  else clearEditorWorkspace();
 }
 
 /* ==========================================================
