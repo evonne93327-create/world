@@ -327,12 +327,15 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
     };
 
     const hasChildren = folderHasChildren(folder.id);
-    const toggleCaret = !hasChildren ? '' : (isCollapsed ? '▸' : '▾');
+    
+    // 💡 修正核心：若沒有子項目（新資料夾），直接將箭頭區塊隱形並停用互動，就不會看起來像 Checkbox 了
+    const caretHtml = hasChildren
+      ? '<span class="folder-caret" style="cursor:pointer;">' + (isCollapsed ? '▸' : '▾') + '</span>'
+      : '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>';
 
-    // 乾淨的 DOM 結構：完全不輸出 checkbox
     folderRow.innerHTML = 
       '<div class="node-left">' +
-        '<span class="folder-caret" style="cursor:' + (hasChildren ? 'pointer' : 'default') + ';">' + toggleCaret + '</span>' +
+        caretHtml +
         '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
         '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
       '</div>';
@@ -356,6 +359,75 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       }
     }
 
+    attachContextMenu(folderRow, function() { return buildFolderMenuItems(folder); }, function() { return (folder.icon || '📁') + ' ' + folder.name; });
+
+    // 拖曳放置處理
+    folderRow.ondragover = function(e) { e.preventDefault(); folderRow.style.background = "#E0E7FF"; };
+    folderRow.ondragleave = function() { folderRow.style.background = ""; };
+    folderRow.ondrop = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      folderRow.style.background = "";
+      try {
+        const dragPayload = JSON.parse(e.dataTransfer.getData("text/plain"));
+        if (dragPayload.type === "doc") {
+          const doc = appData.docs.find(d => d.id === dragPayload.id);
+          if (doc) {
+            doc.folderId = folder.id;
+            doc.worldId = worldId;
+            saveData();
+            renderSidebarTree();
+            renderBreadcrumb();
+          }
+        } else if (dragPayload.type === "folder") {
+          const movingFolderId = dragPayload.id;
+          if (movingFolderId !== folder.id && !isDescendantOf(movingFolderId, folder.id)) {
+            const f = appData.folders.find(x => x.id === movingFolderId);
+            if (f) {
+              f.parentId = folder.id;
+              f.worldId = worldId;
+              saveData();
+              renderSidebarTree();
+              renderBreadcrumb();
+            }
+          }
+        }
+      } catch(err) {}
+    };
+
+    folderDiv.appendChild(folderRow);
+
+    const childrenDiv = document.createElement("div");
+    childrenDiv.className = "folder-children";
+    if (isCollapsed && !search) childrenDiv.style.display = "none";
+
+    renderFolderLevel(worldId, folder.id, childrenDiv, search);
+
+    const docsInFolder = appData.docs.filter(d => {
+      const match = d.worldId === worldId && d.folderId === folder.id;
+      if (!search) return match;
+      return match && (d.title.toLowerCase().includes(search) || d.content.toLowerCase().includes(search));
+    });
+
+    docsInFolder.forEach(function(doc) {
+      childrenDiv.appendChild(createDocRowElement(doc));
+    });
+
+    folderDiv.appendChild(childrenDiv);
+    parentElement.appendChild(folderDiv);
+  });
+
+  if (parentId === null) {
+    const rootDocs = appData.docs.filter(d => {
+      const isRoot = d.worldId === worldId && !d.folderId;
+      if (!search) return isRoot;
+      return isRoot && (d.title.toLowerCase().includes(search) || d.content.toLowerCase().includes(search));
+    });
+    rootDocs.forEach(function(doc) {
+      parentElement.appendChild(createDocRowElement(doc));
+    });
+  }
+}
     attachContextMenu(folderRow, function() { return buildFolderMenuItems(folder); }, function() { return (folder.icon || '📁') + ' ' + folder.name; });
 
     folderRow.ondragover = function(e) { e.preventDefault(); folderRow.style.background = "#E0E7FF"; };
