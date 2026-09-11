@@ -118,7 +118,7 @@ aside.world-rail {
   width: 100%;
 }
 
-/* 2. 中間欄：目錄欄 (頂格向上對齊) */
+/* 2. 中間欄：頂格目錄欄 */
 aside.sidebar-directory {
   width: 290px;
   min-width: 290px;
@@ -219,10 +219,6 @@ aside.sidebar-directory.collapsed {
   transition: border-color 0.15s;
 }
 
-.search-box-inner:focus-within {
-  border-color: var(--border-focus);
-}
-
 .search-lens-icon {
   font-size: 13px;
   margin-right: 6px;
@@ -269,7 +265,7 @@ aside.sidebar-directory.collapsed {
   background: var(--bg-sidebar);
 }
 
-/* 樹狀結構列 */
+/* 樹狀結構列 (類 Windows 互動) */
 .node-row {
   display: flex;
   align-items: center;
@@ -334,7 +330,7 @@ aside.sidebar-directory.collapsed {
   margin-left: 6px;
 }
 
-/* 3. 電腦端右側工作區：完全維持你的原樣 */
+/* 3. 電腦端右側主要工作區 (完全維持原始版型) */
 .app-main-layout {
   flex: 1;
   display: flex;
@@ -599,7 +595,7 @@ aside.sidebar-directory.collapsed {
 .sidebar-overlay.active { display: block; }
 
 /* ==========================================================
-   手機端專屬設定 (<= 768px)：只有手機端套用以下更動！
+   手機端特別適配 (<= 768px)：僅在此處針對手機版微調！
    ========================================================== */
 @media (max-width: 768px) {
   body {
@@ -637,7 +633,7 @@ aside.sidebar-directory.collapsed {
     flex-shrink: 0;
   }
 
-  /* 2. 目錄欄在手機上為抽屜式 */
+  /* 2. 目錄欄為手機抽屜 */
   aside.sidebar-directory {
     position: fixed;
     top: 0;
@@ -659,33 +655,33 @@ aside.sidebar-directory.collapsed {
     height: calc(100dvh - 54px);
   }
 
-  /* 3. 頂部列排版：只在手機端將 C 移到 A 右側，並刪除 B */
+  /* 3. 手機版頂部：刪除 B，並將 C 移到 A 右邊 */
   .top-nav-bar {
     display: flex !important;
     justify-content: space-between !important;
     padding: 0 12px;
   }
 
-  /* 手機刪除 B (世界觀按鈕) */
+  /* 手機刪除 B（世界觀按鈕） */
   #btnB_WorldBadge {
     display: none !important;
   }
 
-  /* 手機左側群組包含 A */
+  /* A 在最左側 */
   .nav-group-left {
     order: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
   }
 
-  /* 將中央的 C 移到左側群組 A 的右邊 */
+  /* 將中央的 C 移到 A 右側 */
   .nav-group-center {
     order: 2;
     margin-right: auto;
-    margin-left: 6px;
+    margin-left: 8px;
   }
 
+  /* 右側 D 與 E */
   .nav-group-right {
     order: 3;
     display: flex;
