@@ -86,7 +86,6 @@ let iconPickerContext = { type: null, id: null };
 let moveFolderTargetId = null;
 let connectingSourceNodeId = null;
 
-// 自動讀取 LocalStorage
 const saved = localStorage.getItem("novel_multi_world_data_v6");
 if (saved) {
   try {
@@ -200,7 +199,7 @@ function promptCreateWorldview() {
 }
 
 /* ==========================================================
-   4. DIRECTORY TREE (類 Windows 目錄：單擊選取、雙擊展開)
+   4. DIRECTORY TREE (類 Windows 目錄：單擊選中、雙擊展開)
    ========================================================== */
 function renderSidebarTree() {
   const container = document.getElementById("worldTreeContainer");
@@ -256,7 +255,7 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       renderSidebarTree();
     };
 
-    // 拖拉歸檔支援
+    // 拖拉歸檔
     folderRow.ondragover = function(e) { e.preventDefault(); folderRow.style.background = "#EAE2D8"; };
     folderRow.ondragleave = function() { folderRow.style.background = ""; };
     folderRow.ondrop = function(e) {
@@ -347,7 +346,7 @@ function createDocRowElement(doc) {
 function navigateToFolder(folderId) {
   if (!folderId) return;
 
-  // 1. 自動展開側邊目錄欄 (電腦展開、手機開抽屜)
+  // 1. 自動展開側邊目錄欄 (電腦端展開、手機端開抽屜)
   const sidebar = document.getElementById("appSidebar");
   if (sidebar && sidebar.classList.contains("collapsed")) {
     sidebar.classList.remove("collapsed");
@@ -358,7 +357,7 @@ function navigateToFolder(folderId) {
     if (overlay) overlay.classList.add("active");
   }
 
-  // 2. 向上遞迴展開該資料夾及所有父資料夾
+  // 2. 向上回溯，展開沿途所有父層資料夾
   let curId = folderId;
   while (curId) {
     collapsedFolders[curId] = false;
@@ -412,7 +411,7 @@ function renderBreadcrumbs() {
   };
   container.appendChild(worldItem);
 
-  // 中間資料夾 (點擊即可跳轉選中)
+  // 中間資料夾 (點擊直接跳轉選中)
   crumbs.forEach(function(crumb) {
     const sep = document.createElement("span");
     sep.className = "crumb-sep";
