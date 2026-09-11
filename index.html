@@ -11,7 +11,7 @@
 </head>
 <body>
 
-  <!-- 1. 最左側：世界觀直欄 -->
+  <!-- 1. 最左側世界觀切換欄 (貫穿全頁高) -->
   <aside class="world-rail" id="appWorldRail">
     <button class="world-rail-btn add-btn" title="新增頂層世界觀" onclick="promptCreateWorldview()">＋</button>
     <div class="world-rail-list" id="worldRailContainer"></div>
@@ -35,7 +35,7 @@
       <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="executeBatchDelete()">刪除選取項</button>
     </div>
 
-    <!-- 搜尋框 -->
+    <!-- 搜尋框 (固定放大鏡 + 無底色叉叉) -->
     <div class="search-wrap">
       <div class="search-box-inner">
         <span class="search-lens-icon">🔍</span>
@@ -47,16 +47,17 @@
     <!-- 樹狀目錄清單 -->
     <div class="directory-tree-area" id="worldTreeContainer"></div>
 
-    <!-- 底部功能按鈕 -->
+    <!-- 底部功能 -->
     <div class="directory-footer">
-      <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="openPaletteModal()">🎨 色盤</button>
+      <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="openPaletteModal()">🎨 標籤分類設定</button>
       <button class="btn btn-secondary" style="padding:6px 10px;" title="備份完整資料庫" onclick="exportFullDatabaseJSON()">💾 備份</button>
     </div>
   </aside>
 
-  <!-- 3. 右側：頂部橫 Bar + 主工作內容 -->
+  <!-- 3. 右側主區域 -->
   <div class="app-main-layout">
     <header class="top-nav-bar">
+      <!-- 左側 A 與 B -->
       <div class="nav-group-left">
         <button class="nav-btn-icon" id="btnA_Hamburger" onclick="toggleSidebarMenu()" title="展開/收納目錄">☰</button>
         <button class="nav-world-btn" id="btnB_WorldBadge" onclick="openIconPicker('world', activeWorldId)" title="當前世界觀">
@@ -65,6 +66,7 @@
         </button>
       </div>
 
+      <!-- 中間 C: 白板與文檔切換膠囊 -->
       <div class="nav-group-center">
         <div class="tab-switch-box" id="btnC_TabSwitch">
           <button class="tab-btn active" id="tabEditorBtn" onclick="switchView('editor')">
@@ -76,6 +78,7 @@
         </div>
       </div>
 
+      <!-- 右側 D 與 E -->
       <div class="nav-group-right">
         <button class="nav-action-btn secondary" id="btnD_Export" onclick="openBatchExportModal()" title="批量匯出">
           <span>📤</span><span class="btn-text">匯出</span>
@@ -93,7 +96,7 @@
           <div class="meta-left-col">
             <div class="breadcrumb-row" id="docBreadcrumbBar"></div>
             <div class="doc-title-line">
-              <button class="doc-icon-picker-btn" id="docIconBtn" title="自訂 Icon" onclick="openIconPicker('doc', activeDocId)">📄</button>
+              <button class="doc-icon-picker-btn" id="docIconBtn" title="更換圖示" onclick="openIconPicker('doc', activeDocId)">📄</button>
               <input type="text" id="docTitleInput" class="doc-title-input" placeholder="文檔標題..." oninput="onTitleChange()">
             </div>
             <div class="doc-stats-line">
@@ -161,7 +164,7 @@
             <option value="txt">純文字 TXT 檔案</option>
           </select>
         </label>
-        <div style="display:flex; gap:6px;">
+        <div style="display:flex; gap:8px;">
           <button class="btn btn-secondary" onclick="closeBatchExportModal()">取消</button>
           <button class="btn btn-primary" onclick="confirmBatchExport()">開始匯出</button>
         </div>
