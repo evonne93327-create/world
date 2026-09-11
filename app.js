@@ -109,15 +109,50 @@ function saveData() {
 /* ==========================================================
    2. INITIALIZATION
    ========================================================== */
-window.addEventListener("DOMContentLoaded", function() {
+wwindow.addEventListener("DOMContentLoaded", function() {
   buildEmojiPicker();
   renderWorldRail();
   renderSidebarTree();
   updateWorldBadge();
-  loadDocToEditor(activeDocId);
+  if (activeDocId) loadDocToEditor(activeDocId);
   setupCanvasEvents();
+  setupGlobalClickDismiss();
+  setupDirectoryContextMenu();
+  setupDeleteKeyShortcut();
+  setupHistoryNavigation();
 });
+/* ==========================================================
+   瀏覽器返回鍵 (History API) 支援
+   ========================================================== */
+function setupHistoryNavigation() {
+  if (!history.state) {
+    history.replaceState({ view: 'editor', drawer: false }, "");
+  }
 
+  window.addEventListener("popstate", function(e) {
+    const sidebar = document.getElementById("appSidebar");
+    const isDrawerOpen = sidebar && sidebar.classList.contains("drawer-open");
+
+    // 若側邊欄打開，返回鍵優先關閉側邊欄
+    if (isDrawerOpen) {
+      closeSidebarMobile();
+      return;
+    }
+
+    // 若當前在白板，返回鍵退回文檔視圖
+    if (activeView === 'canvas') {
+      switchView('editor', false);
+      return;
+    }
+
+    // 若有彈窗打開，返回鍵關閉彈窗
+    const activeModal = document.querySelector(".modal-overlay.active");
+    if (activeModal) {
+      activeModal.classList.remove("active");
+      return;
+    }
+  });
+}
 function toggleSidebarMenu() {
   const isMobile = window.innerWidth <= 768;
   const sidebar = document.getElementById("appSidebar");
@@ -125,16 +160,17 @@ function toggleSidebarMenu() {
 
   if (isMobile) {
     const isOpen = sidebar.classList.contains("drawer-open");
-    if (isOpen) closeSidebarMobile();
-    else {
+    if (isOpen) {
+      closeSidebarMobile();
+    } else {
       sidebar.classList.add("drawer-open");
       overlay.classList.add("active");
+      history.pushState({ drawer: true }, "");
     }
   } else {
     sidebar.classList.toggle("collapsed");
   }
 }
-
 function closeSidebarMobile() {
   const sidebar = document.getElementById("appSidebar");
   const overlay = document.getElementById("sidebarOverlay");
