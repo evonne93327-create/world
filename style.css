@@ -7,7 +7,7 @@
   --bg-sunken: #ECE5D4;
   --border: #E1D7C1;
   --border-soft: #EBE2CC;
-  --border-focus: #5A6D82; /* 徹底去除任何紅色框線 */
+  --border-focus: #5A6D82;
 
   --text-primary: #2A2420;
   --text-secondary: #6E6152;
@@ -57,7 +57,6 @@ body {
   overflow: hidden;
 }
 
-/* 全域輸入框去紅邊：不論點擊或聚焦都不會出現紅色外框 */
 button:focus-visible, 
 input:focus-visible, 
 textarea:focus-visible,
@@ -70,7 +69,6 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--border-focus) !important;
 }
 
-/* 無框輸入區：主要內文輸入框、標題、搜尋框，聚焦時完全不顯示任何外框/邊線 */
 .content-textarea:focus,
 .content-textarea:focus-visible,
 .doc-title-input:focus,
@@ -87,9 +85,7 @@ input:focus, textarea:focus, select:focus {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ==========================================================
-   最左側世界觀直欄
-   ========================================================== */
+/* 最左側世界觀直欄 */
 aside.world-rail {
   width: 62px;
   min-width: 62px;
@@ -151,9 +147,7 @@ aside.world-rail {
   flex: 1;
 }
 
-/* ==========================================================
-   中間欄：頂格目錄欄 (完全貫穿貼頂)
-   ========================================================== */
+/* 中間欄：頂格目錄欄 */
 aside.sidebar-directory {
   width: 280px;
   min-width: 280px;
@@ -222,7 +216,6 @@ aside.sidebar-directory.collapsed {
 }
 .batch-bar.active { display: flex; }
 
-/* 搜尋框：無底色叉叉與無紅色外框 */
 .search-wrap {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
@@ -289,7 +282,6 @@ aside.sidebar-directory.collapsed {
   gap: 6px;
 }
 
-/* 類 Windows 樹狀清單列 */
 .node-row {
   display: flex;
   align-items: center;
@@ -345,9 +337,7 @@ aside.sidebar-directory.collapsed {
   margin-left: 7px;
 }
 
-/* ==========================================================
-   右側主要結構
-   ========================================================== */
+/* 右側主結構 */
 .app-main-layout {
   flex: 1;
   display: flex;
@@ -435,7 +425,6 @@ header.top-nav-bar {
 .nav-action-btn.primary { background: var(--accent); color: white; }
 .nav-action-btn.secondary { background: var(--bg-card); border-color: var(--border); color: var(--text-primary); }
 
-/* 主工作區 */
 main.content-workspace {
   flex: 1;
   height: 100%;
@@ -460,7 +449,6 @@ main.content-workspace {
 }
 .meta-left-col { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
-/* 類 Windows 麵包屑樣式 */
 .breadcrumb-row {
   display: flex;
   align-items: center;
@@ -626,7 +614,7 @@ main.content-workspace {
   cursor: pointer;
 }
 
-/* 白板樣式 */
+/* 白板樣式 (Graphs 專用) */
 #canvasView {
   position: relative;
   width: 100%;
@@ -652,11 +640,39 @@ main.content-workspace {
   z-index: 10;
   max-width: 650px;
 }
-.canvas-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-.canvas-svg g, .canvas-svg path, .canvas-svg text { pointer-events: all; }
-.relation-line { stroke: var(--jade); stroke-width: 2.5; fill: none; cursor: pointer; }
-.line-label-bg { fill: var(--bg-card); stroke: var(--jade-light); stroke-width: 1.5; rx: 6; ry: 6; cursor: pointer; }
-.line-label-box { font-size: 11px; font-weight: 600; fill: var(--text-primary); text-anchor: middle; dominant-baseline: central; cursor: pointer; }
+.canvas-svg { 
+  position: absolute; 
+  inset: 0; 
+  width: 100%; 
+  height: 100%; 
+  z-index: 1; 
+  pointer-events: none; 
+}
+.canvas-svg g, .canvas-svg path, .canvas-svg text { 
+  pointer-events: all; 
+}
+.relation-line { 
+  stroke: var(--jade); 
+  stroke-width: 2.5; 
+  fill: none; 
+  cursor: pointer; 
+}
+.line-label-bg { 
+  fill: var(--bg-card); 
+  stroke: var(--jade-light); 
+  stroke-width: 1.5; 
+  rx: 6; 
+  ry: 6; 
+  cursor: pointer; 
+}
+.line-label-box { 
+  font-size: 11px; 
+  font-weight: 600; 
+  fill: var(--text-primary); 
+  text-anchor: middle; 
+  dominant-baseline: central; 
+  cursor: pointer; 
+}
 .canvas-node {
   position: absolute;
   width: 200px;
@@ -667,9 +683,14 @@ main.content-workspace {
   padding: 10px;
   cursor: grab;
   z-index: 2;
+  user-select: none;
+}
+.canvas-node.connecting {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-light) !important;
 }
 
-/* 彈出視窗與自定義色盤圓圈佈局 */
+/* 彈出視窗與自定義色盤 */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -723,7 +744,6 @@ main.content-workspace {
   color: var(--text-primary);
 }
 
-/* 標籤色盤列表：圓圈色彩 + 自定義文字 */
 .palette-list-box {
   display: flex;
   flex-direction: column;
@@ -768,9 +788,7 @@ main.content-workspace {
 .picker-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
 .picker-option:hover { background: var(--bg-sunken); }
 
-/* ==========================================================
-   自訂右鍵／長按選單（桌面：浮動選單／手機：底部彈出選單）
-   ========================================================== */
+/* 自訂右鍵選單 */
 .ctx-menu-overlay {
   position: fixed;
   inset: 0;
@@ -835,21 +853,19 @@ main.content-workspace {
 .ctx-menu-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .ctx-menu-divider { height: 1px; background: var(--border-soft); margin: 4px 4px; flex-shrink: 0; }
 
-/* 讓開啟長按選單的元素不要跳出瀏覽器原生的複製/選取彈窗 */
 .node-row, .world-rail-btn {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
 }
 
 /* ==========================================================
-   手機版響應式：置底橫向世界觀導航欄與手機 UI 配置
+   手機版響應式
    ========================================================== */
 @media (max-width: 768px) {
   body {
     flex-direction: column;
   }
 
-  /* 頂部導航列排版：A (漢堡) -> C (文檔/白板) -> 右側按鈕 */
   header.top-nav-bar {
     display: flex;
     justify-content: space-between;
@@ -864,12 +880,12 @@ main.content-workspace {
     order: 1;
   }
 
-  /* 1. 手機刪掉 B（世界觀按鈕） */
+  /* 手機刪掉 B（世界觀按鈕） */
   #btnB_WorldBadge {
     display: none !important;
   }
 
-  /* 2. C（文檔／白板）移到 A（漢堡）右邊 */
+  /* C（文檔／白板）移到 A（漢堡）右邊 */
   .nav-group-center {
     order: 2;
     margin-left: 8px;
@@ -880,7 +896,7 @@ main.content-workspace {
     order: 3;
   }
 
-  /* 3. 文檔／白板切換按鈕 → 只留 Icon 不留文字 */
+  /* 文檔／白板切換按鈕 → 只留 Icon 不留文字 */
   .tab-btn {
     font-size: 0 !important;
     padding: 6px 10px;
@@ -889,12 +905,10 @@ main.content-workspace {
     font-size: 13px !important;
   }
 
-  /* 4. 麵包屑分隔符稍微加大觸控範圍 */
   .breadcrumb-sep {
     padding: 2px 4px;
   }
 
-  /* 最左側欄位改為：固定在頁面最底部，橫向排列，加號在最左邊 */
   aside.world-rail {
     order: 3;
     width: 100%;
@@ -933,13 +947,11 @@ main.content-workspace {
     flex-shrink: 0;
   }
 
-  /* 主介面佔滿扣除底欄的高度 */
   .app-main-layout {
     height: calc(100vh - 56px - var(--safe-b));
     height: calc(100dvh - 56px - var(--safe-b));
   }
 
-  /* 目錄抽屜 */
   aside.sidebar-directory {
     position: fixed;
     left: 0;
@@ -970,7 +982,6 @@ main.content-workspace {
   .meta-right-col { width: 100%; justify-content: flex-end; }
   .editor-content-area { padding: 16px; }
 
-  /* 觸控體驗優化 */
   .node-row {
     padding: 9px 8px;
     min-height: 40px;
@@ -1011,7 +1022,6 @@ main.content-workspace {
   .doc-title-input { font-size: 19px; }
   .content-textarea { font-size: 15px; line-height: 1.85; min-height: 300px; }
 
-  /* 右鍵／長按選單：手機版從底部滑出 */
   .ctx-menu {
     left: 0 !important;
     right: 0;
