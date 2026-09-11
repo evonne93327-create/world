@@ -324,16 +324,17 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       renderSidebarTree();
     };
 
-const caretHtml = hasChildren
-  ? '<span class="folder-caret" style="cursor:pointer;">' + (isCollapsed ? '▸' : '▾') + '</span>'
-  : '';
-     
-    folderRow.innerHTML =
-  '<div class="node-left">' +
-    '<span class="node-caret-space">' + caretHtml + '</span>' +
-    '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
-    '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
-  '</div>';
+    const hasChildren = folderHasChildren(folder.id);
+    const caretHtml = hasChildren
+      ? '<span class="folder-caret" style="cursor:pointer;">' + (isCollapsed ? '▸' : '▾') + '</span>'
+      : '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>';
+
+    folderRow.innerHTML = 
+      '<div class="node-left">' +
+        caretHtml +
+        '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
+        '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
+      '</div>';
 
     const iconSpan = folderRow.querySelector('.node-icon');
     if (iconSpan) {
