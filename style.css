@@ -597,110 +597,50 @@ aside.sidebar-directory.collapsed {
 /* ==========================================================
    手機端特別適配 (<= 768px)：僅在此處針對手機版微調！
    ========================================================== */
+/* 電腦版：保持 C 按鈕居中 */
+@media (min-width: 769px) {
+  .nav-group-left {
+    position: relative;
+  }
+  #btnC_TabSwitch {
+    position: absolute;
+    left: 50vw;
+    transform: translateX(-50%);
+  }
+}
+
+/* ==========================================================
+   手機版響應式（新增要求）
+   ========================================================== */
 @media (max-width: 768px) {
-  body {
-    flex-direction: column;
-  }
-
-  /* 1. 世界觀置底橫排 */
-  aside.world-rail {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 54px;
-    flex-direction: row;
-    padding: 6px 12px;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    background: var(--bg-rail);
-    z-index: 30;
-    box-shadow: 0 -2px 10px rgba(44, 36, 30, 0.05);
-  }
-
-  .world-rail-list {
-    flex-direction: row;
-    width: auto;
-    flex: 1;
-    overflow-x: auto;
-  }
-
-  .world-rail-btn {
-    width: 38px;
-    height: 38px;
-    font-size: 17px;
-    flex-shrink: 0;
-  }
-
-  /* 2. 目錄欄為手機抽屜 */
-  aside.sidebar-directory {
-    position: fixed;
-    top: 0;
-    bottom: 54px;
-    left: 0;
-    width: 82vw;
-    max-width: 320px;
-    transform: translateX(-100%);
-    box-shadow: 4px 0 20px rgba(44, 36, 30, 0.15);
-    z-index: 40;
-  }
-  aside.sidebar-directory.drawer-open {
-    transform: translateX(0);
-    display: flex !important;
-  }
-
-  .app-main-layout {
-    height: calc(100vh - 54px);
-    height: calc(100dvh - 54px);
-  }
-
-  /* 3. 手機版頂部：刪除 B，並將 C 移到 A 右邊 */
-  .top-nav-bar {
-    display: flex !important;
-    justify-content: space-between !important;
-    padding: 0 12px;
-  }
-
-  /* 手機刪除 B（世界觀按鈕） */
+  /* 1. 手機刪掉 B（世界觀按鈕） */
   #btnB_WorldBadge {
     display: none !important;
   }
 
-  /* A 在最左側 */
+  /* 2. C（文檔／白板）移到 A（漢堡）右邊 */
   .nav-group-left {
-    order: 1;
     display: flex;
     align-items: center;
+    gap: 8px;
   }
-
-  /* 將中央的 C 移到 A 右側 */
-  .nav-group-center {
-    order: 2;
-    margin-right: auto;
-    margin-left: 8px;
-  }
-
-  /* 右側 D 與 E */
-  .nav-group-right {
-    order: 3;
+  #btnC_TabSwitch {
+    position: static;
+    transform: none;
     display: flex;
-    align-items: center;
-    gap: 6px;
   }
 
-  /* 4. 文檔／白板切換按鈕 (C)：只留 Icon 不留文字 */
-  .tab-switch-box .tab-text {
+  /* 3. 文檔／白板切換按鈕 → 只留 Icon 不留文字 */
+  .tab-btn .tab-text {
     display: none !important;
   }
-  .tab-switch-box .tab-btn {
-    padding: 6px 10px !important;
-    font-size: 16px !important;
-    min-width: 36px;
-    justify-content: center;
+  .tab-btn {
+    padding: 6px 10px;
+    font-size: 14px;
   }
 
-  .editor-content-area {
-    padding: 14px 16px;
+  /* 麵包屑可點擊箭頭優化 */
+  .breadcrumb-sep {
+    padding: 2px 4px;
   }
 }
