@@ -23,15 +23,15 @@
       <span class="directory-title">目錄工具欄</span>
       <div class="dir-btn-group">
         <button class="icon-sm-btn" id="trashToggleBtn" title="批量刪除模式" onclick="toggleBatchDeleteMode()">🗑️</button>
-        <button class="icon-sm-btn" title="新增資料夾" onclick="promptCreateFolder(null)">📁</button>
-        <button class="icon-sm-btn" title="新增文檔" onclick="createNewDoc(null)">📄</button>
+        <button class="icon-sm-btn" title="新增資料夾（若已選取資料夾，將新增於其底下）" onclick="createFolderInCurrentContext()">📁</button>
+        <button class="icon-sm-btn" title="新增文檔（若已選取資料夾，將新增於其底下）" onclick="createDocInCurrentContext()">📄</button>
         <button class="icon-sm-btn mobile-close" id="closeSidebarBtn" onclick="closeSidebarMobile()">✕</button>
       </div>
     </div>
 
     <!-- 批量刪除列 -->
     <div class="batch-bar" id="batchActionBar">
-      <span>已進入批量刪除模式</span>
+      <span id="batchSelectedCountText">批量刪除模式：點選項目以選取</span>
       <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="executeBatchDelete()">刪除選取項</button>
     </div>
 
@@ -76,7 +76,7 @@
         <button class="nav-action-btn secondary" id="btnD_Export" onclick="openBatchExportModal()" title="批量匯出">
           <span>📤</span><span class="btn-text">匯出</span>
         </button>
-        <button class="nav-action-btn primary" id="btnE_NewDoc" onclick="createNewDoc(null)" title="新增文檔">
+        <button class="nav-action-btn primary" id="btnE_NewDoc" onclick="createDocInCurrentContext()" title="新增文檔（若已選取資料夾，將新增於其底下）">
           <span>＋</span><span class="btn-text">新文檔</span>
         </button>
       </div>
