@@ -70,6 +70,18 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--border-focus) !important;
 }
 
+/* 無框輸入區：主要內文輸入框、標題、搜尋框，聚焦時完全不顯示任何外框/邊線 */
+.content-textarea:focus,
+.content-textarea:focus-visible,
+.doc-title-input:focus,
+.doc-title-input:focus-visible,
+.search-input-box:focus,
+.search-input-box:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
@@ -754,6 +766,79 @@ main.content-workspace {
 .picker-option:hover { background: var(--bg-sunken); }
 
 /* ==========================================================
+   自訂右鍵／長按選單（桌面：浮動選單／手機：底部彈出選單）
+   ========================================================== */
+.ctx-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(42,36,32,0.32);
+  z-index: 190;
+  display: none;
+}
+.ctx-menu-overlay.active { display: block; }
+
+.ctx-menu {
+  position: fixed;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  z-index: 191;
+  display: none;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: 250px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.ctx-menu.active {
+  display: flex;
+  animation: ctxFadeIn 0.14s ease;
+}
+@keyframes ctxFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ctx-menu-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition: background 0.12s ease;
+}
+.ctx-menu-item:hover { background: var(--bg-sunken); }
+.ctx-menu-item:active { background: var(--bg-sunken); transform: scale(0.98); }
+.ctx-menu-item.danger { color: var(--danger); }
+.ctx-menu-item.danger:hover { background: var(--danger-light); }
+.ctx-menu-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.ctx-menu-divider { height: 1px; background: var(--border-soft); margin: 4px 4px; flex-shrink: 0; }
+
+/* 讓開啟長按選單的元素不要跳出瀏覽器原生的複製/選取彈窗 */
+.node-row, .world-rail-btn {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+/* ==========================================================
    手機版響應式：置底橫向世界觀導航欄
    ========================================================== */
 @media (max-width: 768px) {
@@ -836,4 +921,80 @@ main.content-workspace {
   .editor-meta-panel { flex-direction: column; padding: 12px 16px; }
   .meta-right-col { width: 100%; justify-content: flex-end; }
   .editor-content-area { padding: 16px; }
+
+  /* ---- 觸控體驗優化：加大可點擊區域、加入按壓回饋 ---- */
+  .node-row {
+    padding: 9px 8px;
+    min-height: 40px;
+    font-size: 13.5px;
+    border-radius: 8px;
+  }
+  .node-row:active { background: var(--bg-sunken); }
+  .folder-caret { width: 20px; height: 20px; font-size: 11px; }
+  .node-icon { font-size: 15px; }
+
+  .icon-sm-btn { width: 34px; height: 34px; font-size: 15px; }
+  .nav-btn-icon { width: 38px; height: 38px; }
+  .nav-btn-icon:active, .icon-sm-btn:active,
+  .action-pill-btn:active, .nav-action-btn:active,
+  .world-rail-btn:active {
+    transform: scale(0.94);
+    opacity: 0.85;
+  }
+
+  .world-rail-btn { width: 42px; height: 42px; }
+
+  .nav-world-btn {
+    max-width: 40vw;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  #currentWorldName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  header.top-nav-bar { box-shadow: var(--shadow-sm); }
+
+  .search-wrap { padding: 10px 12px; }
+  .search-box-inner { padding: 4px 10px 4px 12px; }
+  .search-input-box { padding: 7px 0; font-size: 13.5px; }
+
+  .action-pill-btn { padding: 9px 12px; }
+
+  .doc-title-input { font-size: 19px; }
+  .content-textarea { font-size: 15px; line-height: 1.85; min-height: 300px; }
+
+  /* ---- 右鍵／長按選單：手機版改為從底部滑出的操作選單 ---- */
+  .ctx-menu {
+    left: 0 !important;
+    right: 0;
+    top: auto !important;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 75vh;
+    border-radius: 18px 18px 0 0;
+    padding: 10px 10px calc(14px + var(--safe-b));
+    box-shadow: 0 -10px 32px rgba(42,36,32,0.25);
+  }
+  .ctx-menu::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 2px auto 10px;
+    flex-shrink: 0;
+  }
+  .ctx-menu.active { animation: ctxSlideUp 0.2s ease; }
+  @keyframes ctxSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .ctx-menu-item { padding: 13px 12px; font-size: 14.5px; }
+  .ctx-menu-title { font-size: 12.5px; padding: 4px 12px 10px; }
 }
