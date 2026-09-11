@@ -11,31 +11,31 @@
 </head>
 <body>
 
-  <!-- 最左側直欄（手機版自動轉為置底橫列） -->
+  <!-- 1. 最左側：世界觀直欄 -->
   <aside class="world-rail" id="appWorldRail">
     <button class="world-rail-btn add-btn" title="新增頂層世界觀" onclick="promptCreateWorldview()">＋</button>
     <div class="world-rail-list" id="worldRailContainer"></div>
   </aside>
 
-  <!-- 中間欄：頂格目錄工具欄 -->
+  <!-- 2. 中間欄：頂格目錄欄 -->
   <aside class="sidebar-directory" id="appSidebar">
     <div class="directory-top-bar">
       <span class="directory-title">目錄工具欄</span>
       <div class="dir-btn-group">
         <button class="icon-sm-btn" id="trashToggleBtn" title="批量刪除模式" onclick="toggleBatchDeleteMode()">🗑️</button>
-        <button class="icon-sm-btn" title="新增資料夾（若已選取資料夾，將新增於其底下）" onclick="createFolderInCurrentContext()">📁</button>
-        <button class="icon-sm-btn" title="新增文檔（若已選取資料夾，將新增於其底下）" onclick="createDocInCurrentContext()">📄</button>
+        <button class="icon-sm-btn" title="新增資料夾" onclick="promptCreateFolder(null)">📁</button>
+        <button class="icon-sm-btn" title="新增文檔" onclick="createNewDoc(null)">📄</button>
         <button class="icon-sm-btn mobile-close" id="closeSidebarBtn" onclick="closeSidebarMobile()">✕</button>
       </div>
     </div>
 
-    <!-- 批量刪除列 -->
+    <!-- 批量刪除條 -->
     <div class="batch-bar" id="batchActionBar">
-      <span id="batchSelectedCountText">批量刪除模式：點選項目以選取</span>
+      <span>已進入批量刪除模式</span>
       <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="executeBatchDelete()">刪除選取項</button>
     </div>
 
-    <!-- Google 風格搜尋框 -->
+    <!-- 搜尋框 -->
     <div class="search-wrap">
       <div class="search-box-inner">
         <span class="search-lens-icon">🔍</span>
@@ -44,23 +44,28 @@
       </div>
     </div>
 
-    <!-- 樹狀目錄 -->
+    <!-- 樹狀目錄清單 -->
     <div class="directory-tree-area" id="worldTreeContainer"></div>
 
-    <!-- 底部設定按鈕 -->
+    <!-- 底部功能按鈕 -->
     <div class="directory-footer">
-      <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="openPaletteModal()">🎨 標籤分類設定</button>
+      <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="openPaletteModal()">🎨 色盤</button>
       <button class="btn btn-secondary" style="padding:6px 10px;" title="備份完整資料庫" onclick="exportFullDatabaseJSON()">💾 備份</button>
     </div>
   </aside>
 
-  <!-- 右側主區域 -->
+  <!-- 3. 右側：頂部橫 Bar + 主工作內容 -->
   <div class="app-main-layout">
     <header class="top-nav-bar">
-      <!-- 左側群組：A (漢堡) + C (文檔/白板) + B (世界觀，手機隱藏) -->
       <div class="nav-group-left">
         <button class="nav-btn-icon" id="btnA_Hamburger" onclick="toggleSidebarMenu()" title="展開/收納目錄">☰</button>
-        
+        <button class="nav-world-btn" id="btnB_WorldBadge" onclick="openIconPicker('world', activeWorldId)" title="當前世界觀">
+          <span id="currentWorldIcon">🌐</span>
+          <span id="currentWorldName">主世界觀</span>
+        </button>
+      </div>
+
+      <div class="nav-group-center">
         <div class="tab-switch-box" id="btnC_TabSwitch">
           <button class="tab-btn active" id="tabEditorBtn" onclick="switchView('editor')">
             <span class="tab-icon">📝</span><span class="tab-text">文檔</span>
@@ -69,41 +74,32 @@
             <span class="tab-icon">🕸️</span><span class="tab-text">白板</span>
           </button>
         </div>
-
-        <button class="nav-world-btn" id="btnB_WorldBadge" onclick="openIconPicker('world', activeWorldId)" title="當前世界觀">
-          <span id="currentWorldIcon">🌐</span>
-          <span id="currentWorldName">主世界觀</span>
-        </button>
       </div>
 
       <div class="nav-group-right">
         <button class="nav-action-btn secondary" id="btnD_Export" onclick="openBatchExportModal()" title="批量匯出">
           <span>📤</span><span class="btn-text">匯出</span>
         </button>
-        <button class="nav-action-btn primary" id="btnE_NewDoc" onclick="createDocInCurrentContext()" title="新增文檔">
+        <button class="nav-action-btn primary" id="btnE_NewDoc" onclick="createNewDoc(null)" title="新增文檔">
           <span>＋</span><span class="btn-text">新文檔</span>
         </button>
       </div>
     </header>
 
     <main class="content-workspace">
-      <!-- 1. 文檔編輯區 -->
+      <!-- 編輯區 -->
       <section id="editorView" class="view-panel">
         <div class="editor-meta-panel">
           <div class="meta-left-col">
-            <!-- 麵包屑 -->
             <div class="breadcrumb-row" id="docBreadcrumbBar"></div>
-            
             <div class="doc-title-line">
-              <button class="doc-icon-picker-btn" id="docIconBtn" title="更換圖示" onclick="openIconPicker('doc', activeDocId)">📄</button>
+              <button class="doc-icon-picker-btn" id="docIconBtn" title="自訂 Icon" onclick="openIconPicker('doc', activeDocId)">📄</button>
               <input type="text" id="docTitleInput" class="doc-title-input" placeholder="文檔標題..." oninput="onTitleChange()">
             </div>
-            
             <div class="doc-stats-line">
               <span>字數：<strong class="stat-pill" id="statWordCount">0</strong></span>
               <span>更新時間：<span id="statUpdatedAt">--</span></span>
             </div>
-            
             <div class="hashtag-wrap" id="liveTagToolbar"></div>
           </div>
 
@@ -125,13 +121,11 @@
 
           <div class="doc-images-strip" id="docImagesContainer"></div>
 
-          <textarea id="docContentInput" class="content-textarea" placeholder="在此記錄設定、勢力、背景或法術細節...
-💡 章節標註：輸入「# 第一章 啟程」或「第1章」系統會自動在頂部生成快速跳轉按鈕。
-💡 標籤標註：輸入「#帝國軍方 #反抗勢力」系統會自動抽取並套色；點擊上方 Hashtag 名稱可直接定位到內文段落！" oninput="onContentChange()"></textarea>
+          <textarea id="docContentInput" class="content-textarea" placeholder="在此記錄設定..." oninput="onContentChange()"></textarea>
         </div>
       </section>
 
-      <!-- 2. 白板關係區 -->
+      <!-- 白板區 -->
       <section id="canvasView" class="view-panel" style="display:none;">
         <div class="canvas-bar">
           <div style="display:flex; align-items:center; gap:8px;">
@@ -167,7 +161,7 @@
             <option value="txt">純文字 TXT 檔案</option>
           </select>
         </label>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:6px;">
           <button class="btn btn-secondary" onclick="closeBatchExportModal()">取消</button>
           <button class="btn btn-primary" onclick="confirmBatchExport()">開始匯出</button>
         </div>
@@ -215,9 +209,6 @@
   </div>
 
   <div class="color-picker-popup" id="colorPickerPopover"></div>
-  <div class="ctx-menu-overlay" id="ctxMenuOverlay"></div>
-  <div class="ctx-menu" id="customContextMenu"></div>
-
   <script src="app.js"></script>
 </body>
 </html>
