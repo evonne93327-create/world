@@ -86,7 +86,7 @@ let iconPickerContext = { type: null, id: null };
 let moveFolderTargetId = null;
 let connectingSourceNodeId = null;
 
-// 自動讀取 LocalStorage（保證預設資料庫不丟失）
+// 自動讀取 LocalStorage
 const saved = localStorage.getItem("novel_multi_world_data_v6");
 if (saved) {
   try {
@@ -200,7 +200,7 @@ function promptCreateWorldview() {
 }
 
 /* ==========================================================
-   4. DIRECTORY TREE (類 Windows 目錄：單擊選中、雙擊展開、無多餘跳動按鈕)
+   4. DIRECTORY TREE (類 Windows 目錄：單擊選取、雙擊展開)
    ========================================================== */
 function renderSidebarTree() {
   const container = document.getElementById("worldTreeContainer");
@@ -225,7 +225,7 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
     folderRow.className = "node-row " + (folder.id === activeFolderId ? "active" : "");
     folderRow.setAttribute("data-id", folder.id);
 
-    // 單擊選中
+    // 單擊選中反白
     folderRow.onclick = function(e) {
       if (e.target.closest('.node-checkbox') || e.target.closest('.folder-caret') || e.target.closest('.node-icon')) return;
       activeFolderId = folder.id;
@@ -342,12 +342,12 @@ function createDocRowElement(doc) {
 }
 
 /* ==========================================================
-   5. BREADCRUMBS (點擊跳轉、自動展開目錄、選中高亮)
+   5. BREADCRUMBS (點擊資料夾自動開啟目錄並選中)
    ========================================================== */
 function navigateToFolder(folderId) {
   if (!folderId) return;
 
-  // 1. 自動展開側邊目錄欄
+  // 1. 自動展開側邊目錄欄 (電腦展開、手機開抽屜)
   const sidebar = document.getElementById("appSidebar");
   if (sidebar && sidebar.classList.contains("collapsed")) {
     sidebar.classList.remove("collapsed");
@@ -358,7 +358,7 @@ function navigateToFolder(folderId) {
     if (overlay) overlay.classList.add("active");
   }
 
-  // 2. 向上回溯，展開沿途所有父資料夾
+  // 2. 向上遞迴展開該資料夾及所有父資料夾
   let curId = folderId;
   while (curId) {
     collapsedFolders[curId] = false;
@@ -366,11 +366,11 @@ function navigateToFolder(folderId) {
     curId = curFolder ? curFolder.parentId : null;
   }
 
-  // 3. 設定選取狀態並重新渲染樹
+  // 3. 設定為選中狀態並重新渲染
   activeFolderId = folderId;
   renderSidebarTree();
 
-  // 4. 平滑捲動至該項目並聚焦
+  // 4. 平滑滾動定位到目標元素
   setTimeout(function() {
     const targetEl = document.querySelector(`.node-row[data-id="${folderId}"]`);
     if (targetEl) {
@@ -400,7 +400,7 @@ function renderBreadcrumbs() {
     }
   }
 
-  // 世界觀頂層
+  // 頂層世界觀
   const world = appData.worldviews.find(w => w.id === (doc.worldId || activeWorldId));
   const worldItem = document.createElement("span");
   worldItem.className = "crumb-item crumb-world";
@@ -412,7 +412,7 @@ function renderBreadcrumbs() {
   };
   container.appendChild(worldItem);
 
-  // 中間資料夾路徑
+  // 中間資料夾 (點擊即可跳轉選中)
   crumbs.forEach(function(crumb) {
     const sep = document.createElement("span");
     sep.className = "crumb-sep";
@@ -423,14 +423,14 @@ function renderBreadcrumbs() {
     folderItem.className = "crumb-item crumb-folder";
     folderItem.style.cursor = "pointer";
     folderItem.textContent = "📁 " + crumb.name;
-    folderItem.title = "跳轉並在目錄欄選中此資料夾";
+    folderItem.title = "點擊在目錄欄選中此資料夾";
     folderItem.onclick = function() {
       navigateToFolder(crumb.id);
     };
     container.appendChild(folderItem);
   });
 
-  // 當前文檔末端
+  // 末端文檔
   const sepLast = document.createElement("span");
   sepLast.className = "crumb-sep";
   sepLast.textContent = " › ";
@@ -585,7 +585,7 @@ function deleteCurrentDocument() {
 }
 
 /* ==========================================================
-   7. TOC & HASHTAGS (墨與紙自定義配色)
+   7. TOC & HASHTAGS
    ========================================================== */
 function renderTOC(content) {
   const container = document.getElementById("tocLinksContainer");
@@ -993,7 +993,7 @@ function setupCanvasEvents() {
 }
 
 /* ==========================================================
-   10. MODALS, PALETTE, ICONS (取消放儲存左側)
+   10. MODALS, PALETTE, ICONS
    ========================================================== */
 function buildEmojiPicker() {
   const grid = document.getElementById("emojiGrid");
@@ -1271,7 +1271,7 @@ function deleteDocImage(idx) {
 }
 
 /* ==========================================================
-   12. VIEW SWITCH & MOBILE HISTORY (原生返回支援)
+   12. VIEW SWITCH & MOBILE HISTORY (手機原生返回支援)
    ========================================================== */
 function switchView(view) {
   activeView = view;
@@ -1290,14 +1290,14 @@ function switchView(view) {
   }
 
   window.addEventListener("popstate", function(e) {
-    // 1. 若 Modal 彈窗開著，關閉彈窗
+    // 1. 若 Modal 彈窗開著，返回鍵為關閉彈窗
     const openModals = document.querySelectorAll(".modal-overlay.active");
     if (openModals.length > 0) {
       openModals.forEach(m => m.classList.remove("active"));
       return;
     }
 
-    // 2. 若手機抽屜開著，關閉抽屜
+    // 2. 若手機抽屜開著，返回鍵為關閉抽屜
     const sidebar = document.getElementById("appSidebar");
     if (sidebar && sidebar.classList.contains("drawer-open")) {
       closeSidebarMobile();
