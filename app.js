@@ -118,7 +118,6 @@ window.addEventListener("DOMContentLoaded", function() {
   setupHistoryNavigation();
 });
 
-/* 返回鍵支援：返回時關閉側邊欄或回到編輯器 */
 function setupHistoryNavigation() {
   if (!history.state) {
     history.replaceState({ view: 'editor', drawer: false }, "");
@@ -427,7 +426,7 @@ function createDocRowElement(doc) {
 }
 
 /* ==========================================================
-   4. 麵包屑導航 (點擊資料夾與「›」直接打開目錄並選取)
+   4. 麵包屑導航 (支援點擊資料夾與「›」直接打開目錄並選取)
    ========================================================== */
 function renderBreadcrumb() {
   const bar = document.getElementById("docBreadcrumbBar");
@@ -460,7 +459,6 @@ function renderBreadcrumb() {
   }
 
   folderChain.forEach(function(folder) {
-    // 類 Windows 分隔符「›」可點擊跳轉回該資料夾
     const sep = document.createElement("span");
     sep.className = "breadcrumb-sep";
     sep.textContent = "›";
@@ -491,12 +489,10 @@ function renderBreadcrumb() {
   bar.appendChild(docItem);
 }
 
-/* 點擊麵包屑中的資料夾或「›」：打開目錄、展開路徑、選取目標 */
 function navigateToBreadcrumbFolder(folder) {
   activeWorldId = folder.worldId;
   activeFolderId = folder.id;
 
-  // 展開此資料夾及其所有上層資料夾
   let cur = folder;
   while (cur) {
     delete collapsedFolders[cur.id];
@@ -506,7 +502,6 @@ function navigateToBreadcrumbFolder(folder) {
   updateWorldBadge();
   renderSidebarTree();
 
-  // 若在手機螢幕下，自動打開目錄欄抽屜
   if (window.innerWidth <= 768) {
     const sidebar = document.getElementById("appSidebar");
     const overlay = document.getElementById("sidebarOverlay");
@@ -517,7 +512,6 @@ function navigateToBreadcrumbFolder(folder) {
     }
   }
 
-  // 自動平滑滾動到目標資料夾列
   requestAnimationFrame(() => {
     const selectedRow = document.querySelector(".node-row.selected");
     if (selectedRow) selectedRow.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1063,7 +1057,7 @@ function deleteDocById(docId) {
 }
 
 /* ==========================================================
-   7. 白板與圖片
+   7. 白板與圖片 (Graphs 邏輯)
    ========================================================== */
 function handleImageUpload(e) {
   const file = e.target.files[0];
