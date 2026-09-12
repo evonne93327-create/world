@@ -125,6 +125,8 @@ let iconPickerContext = { type: null, id: null };
 let moveFolderTargetId = null;
 let connectingSourceNodeId = null;
 let collapsedFolders = {};
+let docHistory = {}; // docId -> { stack: [content, ...], index: n }（僅存於記憶體，重新整理頁面後會重置）
+const DOC_HISTORY_LIMIT = 100;
 
 const saved = localStorage.getItem("novel_multi_world_data_v5");
 if (saved) {
@@ -180,6 +182,7 @@ window.addEventListener("DOMContentLoaded", function() {
   setupGlobalClickDismiss();
   setupDirectoryContextMenu();
   setupDeleteKeyShortcut();
+  setupGlobalKeyboardShortcuts();
   setupHistoryNavigation();
 });
 
@@ -222,6 +225,59 @@ function setupDeleteKeyShortcut() {
       deleteFolderById(activeFolderId);
     } else if (activeDocId) {
       deleteCurrentDocument();
+    }
+  });
+}
+
+/* ==========================================================
+   全域鍵盤快捷鍵：Ctrl/Cmd + Z / Y / F
+   （Ctrl+C / Ctrl+X / Ctrl+V 複製、剪下、貼上為輸入框與文字區塊的
+   瀏覽器原生行為，本身即可正常運作，不需要、也不應該額外攔截。）
+   ========================================================== */
+function setupGlobalKeyboardShortcuts() {
+  document.addEventListener("keydown", function(e) {
+    const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+    const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+    if (!cmdKey) return;
+
+    const key = e.key.toLowerCase();
+    const activeEl = document.activeElement;
+    const inContentEditor = !!activeEl && activeEl.id === "docContentInput";
+
+    // Ctrl+Z：復原上一步文章內文變更（僅在編輯內文時接手，避免影響標題／搜尋欄等其他輸入框原生的復原功能）
+    if (key === "z" && !e.shiftKey) {
+      if (inContentEditor) {
+        e.preventDefault();
+        undoDocContent();
+      }
+      return;
+    }
+
+    // Ctrl+Y：取消復原（重做）上一步文章內文變更
+    if (key === "y") {
+      if (inContentEditor) {
+        e.preventDefault();
+        redoDocContent();
+      }
+      return;
+    }
+
+    // Ctrl+F：聚焦到目錄搜尋欄，取代瀏覽器內建的「頁面搜尋」
+    if (key === "f") {
+      e.preventDefault();
+      const searchInput = document.getElementById("searchInput");
+      if (!searchInput) return;
+
+      if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById("appSidebar");
+        if (sidebar && !sidebar.classList.contains("drawer-open")) {
+          sidebar.classList.add("drawer-open");
+          document.getElementById("sidebarOverlay").classList.add("active");
+          history.pushState({ drawer: true }, "");
+        }
+      }
+      searchInput.focus();
+      searchInput.select();
     }
   });
 }
@@ -332,6 +388,7 @@ function clearEditorWorkspace() {
   document.getElementById("docImagesContainer").innerHTML = "";
   document.getElementById("tocCard").style.display = "none";
   document.getElementById("docBreadcrumbBar").innerHTML = '<span class="breadcrumb-item" style="color:var(--text-muted);">（目前世界觀尚無文件）</span>';
+  updateUndoRedoButtons(null);
 }
 
 function renderWorldRail() {
@@ -367,7 +424,36 @@ function renderSidebarTree() {
   const currentWorld = appData.worldviews.find(w => w.id === activeWorldId);
   if (!currentWorld) return;
 
+  // 有搜尋關鍵字時，若「目前正在開啟的文檔」本身也符合搜尋結果，優先釘選在最上方
+  if (search) {
+    renderActiveDocSearchPin(container, search);
+  }
+
   renderFolderLevel(currentWorld.id, null, container, search);
+}
+
+// 判斷文檔的標題或內文是否符合搜尋關鍵字
+function docMatchesSearch(doc, search) {
+  if (!search) return true;
+  return (doc.title || "").toLowerCase().includes(search) || (doc.content || "").toLowerCase().includes(search);
+}
+
+// 將目前開啟中的文檔（若符合搜尋條件）釘選在搜尋結果最上方，並附上小標籤標示
+function renderActiveDocSearchPin(container, search) {
+  const doc = appData.docs.find(d => d.id === activeDocId);
+  if (!doc || doc.worldId !== activeWorldId) return;
+  if (!docMatchesSearch(doc, search)) return;
+
+  const pinWrap = document.createElement("div");
+  pinWrap.className = "search-pin-wrap";
+
+  const label = document.createElement("div");
+  label.className = "search-pin-label";
+  label.textContent = "📌 目前開啟的文檔";
+  pinWrap.appendChild(label);
+
+  pinWrap.appendChild(createDocRowElement(doc));
+  container.appendChild(pinWrap);
 }
 
 function folderHasChildren(folderId) {
@@ -492,7 +578,8 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
     const docsInFolder = appData.docs.filter(d => {
       const match = d.worldId === worldId && d.folderId === folder.id;
       if (!search) return match;
-      return match && (d.title.toLowerCase().includes(search) || d.content.toLowerCase().includes(search));
+      if (d.id === activeDocId) return false; // 已於上方釘選顯示，這裡不重複列出
+      return match && docMatchesSearch(d, search);
     });
 
     docsInFolder.forEach(function(doc) {
@@ -507,7 +594,8 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
     const rootDocs = appData.docs.filter(d => {
       const isRoot = d.worldId === worldId && !d.folderId;
       if (!search) return isRoot;
-      return isRoot && (d.title.toLowerCase().includes(search) || d.content.toLowerCase().includes(search));
+      if (d.id === activeDocId) return false; // 已於上方釘選顯示，這裡不重複列出
+      return isRoot && docMatchesSearch(d, search);
     });
     rootDocs.forEach(function(doc) {
       parentElement.appendChild(createDocRowElement(doc));
@@ -765,6 +853,8 @@ function loadDocToEditor(docId) {
   renderDocImages(doc.images || []);
   renderSidebarTree();
   closeQuickJumpPanel();
+
+  ensureDocHistory(doc.id, doc.content || "");
 }
 
 function onTitleChange() {
@@ -782,23 +872,11 @@ function onTitleChange() {
   }
 }
 
-function onContentChange() {
-  const doc = appData.docs.find(d => d.id === activeDocId);
-  if (!doc) return;
-
-  const text = document.getElementById("docContentInput").value;
-  doc.content = text;
-
-  if (!document.getElementById("docTitleInput").value.trim()) {
-    const firstLine = text.trim().split("\n")[0] || "";
-    doc.title = firstLine.substring(0, 24);
-  }
-
+// 依內文重新計算字數與 Hashtag（供打字即時同步、復原／取消復原共用，避免邏輯重複）
+function recomputeDocFromContent(doc, text) {
   const cjk = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
   const eng = (text.replace(/[\u4e00-\u9fa5]/g, ' ').match(/\b[a-zA-Z0-9_]+\b/g) || []).length;
-  const wordCount = cjk + eng;
-  doc.wordCount = wordCount;
-  document.getElementById("statWordCount").textContent = wordCount;
+  doc.wordCount = cjk + eng;
 
   if (!Array.isArray(doc.manualTags)) doc.manualTags = [];
   const textTags = extractHashtagsFromText(text);
@@ -813,6 +891,22 @@ function onContentChange() {
   doc.tags.forEach(function(t) {
     if (!appData.tagSettings[t]) appData.tagSettings[t] = "c_gray";
   });
+}
+
+function onContentChange() {
+  const doc = appData.docs.find(d => d.id === activeDocId);
+  if (!doc) return;
+
+  const text = document.getElementById("docContentInput").value;
+  doc.content = text;
+
+  if (!document.getElementById("docTitleInput").value.trim()) {
+    const firstLine = text.trim().split("\n")[0] || "";
+    doc.title = firstLine.substring(0, 24);
+  }
+
+  recomputeDocFromContent(doc, text);
+  document.getElementById("statWordCount").textContent = doc.wordCount;
 
   doc.updatedAt = formatTime(new Date());
   document.getElementById("statUpdatedAt").textContent = doc.updatedAt;
@@ -823,25 +917,26 @@ function onContentChange() {
   renderLiveHashtags(doc.tags);
   if (document.getElementById("quickJumpPanel").classList.contains("active")) {
     renderQuickJumpList(text);
-    document.getElementById("quickJumpWordCount").textContent = wordCount;
+    document.getElementById("quickJumpWordCount").textContent = doc.wordCount;
     document.getElementById("quickJumpUpdatedAt").textContent = doc.updatedAt;
   }
 
-  // 成本較高的存檔／整棵目錄樹重繪：延遲到停止輸入後才執行，避免打字時卡頓
-  scheduleContentPersist();
+  // 成本較高的存檔／整棵目錄樹重繪／復原快照：延遲到停止輸入後才執行，避免打字時卡頓
+  scheduleContentPersist(doc.id, text);
 }
 
 /* 打字時的效能優化：saveData() 會序列化整個 appData（可能含圖片 base64），
    renderSidebarTree() 則會重繪整棵目錄樹，兩者都不需要每個按鍵都執行一次，
    停止輸入一小段時間後再統一處理即可；分頁關閉/切換文檔前一定會先補存檔，避免遺失內容。 */
 let contentPersistTimer = null;
+let pendingPersistInfo = null; // { docId, text }：debounce 期間暫存的最新內容，供 flush 時補推一筆復原快照
 
-function scheduleContentPersist() {
+function scheduleContentPersist(docId, text) {
+  pendingPersistInfo = { docId: docId, text: text };
   if (contentPersistTimer) clearTimeout(contentPersistTimer);
   contentPersistTimer = setTimeout(function() {
     contentPersistTimer = null;
-    saveData();
-    renderSidebarTree();
+    flushPendingContentPersist();
   }, 400);
 }
 
@@ -849,9 +944,100 @@ function flushPendingContentPersist() {
   if (contentPersistTimer) {
     clearTimeout(contentPersistTimer);
     contentPersistTimer = null;
+    if (pendingPersistInfo) {
+      pushHistorySnapshot(pendingPersistInfo.docId, pendingPersistInfo.text);
+      pendingPersistInfo = null;
+    }
     saveData();
     renderSidebarTree();
   }
+}
+
+/* ==========================================================
+   5.5 文章復原／取消復原（Undo / Redo）
+   每篇文檔各自維護一份內文快照堆疊，僅存在記憶體中（重新整理頁面會重置）。
+   ========================================================== */
+function ensureDocHistory(docId, content) {
+  if (!docHistory[docId]) {
+    docHistory[docId] = { stack: [content], index: 0 };
+  }
+  updateUndoRedoButtons(docId);
+}
+
+function pushHistorySnapshot(docId, content) {
+  const h = docHistory[docId];
+  if (!h) return;
+  if (h.stack[h.index] === content) return; // 內容沒有變化，不用推入新快照
+
+  // 若目前停留在復原後的中間點又繼續輸入，捨棄後面的「取消復原」分支
+  h.stack = h.stack.slice(0, h.index + 1);
+  h.stack.push(content);
+  h.index = h.stack.length - 1;
+
+  if (h.stack.length > DOC_HISTORY_LIMIT) {
+    h.stack.shift();
+    h.index--;
+  }
+
+  if (docId === activeDocId) updateUndoRedoButtons(docId);
+}
+
+function applyHistorySnapshot(doc, content) {
+  doc.content = content;
+  document.getElementById("docContentInput").value = content;
+
+  recomputeDocFromContent(doc, content);
+  doc.updatedAt = formatTime(new Date());
+  document.getElementById("statWordCount").textContent = doc.wordCount;
+  document.getElementById("statUpdatedAt").textContent = doc.updatedAt;
+
+  renderBreadcrumb();
+  renderTOC(content);
+  renderLiveHashtags(doc.tags);
+  renderSidebarTree();
+  if (document.getElementById("quickJumpPanel").classList.contains("active")) {
+    renderQuickJumpList(content);
+    document.getElementById("quickJumpWordCount").textContent = doc.wordCount;
+    document.getElementById("quickJumpUpdatedAt").textContent = doc.updatedAt;
+  }
+
+  saveData();
+}
+
+function undoDocContent() {
+  flushPendingContentPersist();
+  const doc = appData.docs.find(d => d.id === activeDocId);
+  if (!doc) return;
+  const h = docHistory[doc.id];
+  if (!h || h.index <= 0) return;
+
+  h.index--;
+  applyHistorySnapshot(doc, h.stack[h.index]);
+  updateUndoRedoButtons(doc.id);
+}
+
+function redoDocContent() {
+  flushPendingContentPersist();
+  const doc = appData.docs.find(d => d.id === activeDocId);
+  if (!doc) return;
+  const h = docHistory[doc.id];
+  if (!h || h.index >= h.stack.length - 1) return;
+
+  h.index++;
+  applyHistorySnapshot(doc, h.stack[h.index]);
+  updateUndoRedoButtons(doc.id);
+}
+
+function updateUndoRedoButtons(docId) {
+  const undoBtn = document.getElementById("docUndoBtn");
+  const redoBtn = document.getElementById("docRedoBtn");
+  if (!undoBtn || !redoBtn) return;
+
+  const h = docHistory[docId];
+  const canUndo = !!h && h.index > 0;
+  const canRedo = !!h && h.index < h.stack.length - 1;
+  undoBtn.disabled = !canUndo;
+  redoBtn.disabled = !canRedo;
 }
 
 window.addEventListener("beforeunload", flushPendingContentPersist);
@@ -1189,10 +1375,10 @@ function renderLiveHashtags(tags) {
     
     chip.innerHTML = 
       '<span>#' + escapeHtml(tag) + '</span>' +
-      '<span style="font-size:9px; opacity:0.7;">▼</span>' +
       '<span class="tag-chip-remove" title="移除此標籤">✕</span>';
+    chip.title = "雙擊以指定分類顏色";
 
-    chip.onclick = function(e) {
+    chip.ondblclick = function(e) {
       e.stopPropagation();
       openColorPicker(tag, chip);
     };
@@ -1538,6 +1724,170 @@ function buildDocMenuItems(doc) {
     { type: "divider" },
     { icon: "🗑️", label: "刪除文檔", danger: true, action: function() { deleteDocById(doc.id); } }
   ];
+}
+
+/* ==========================================================
+   垃圾桶：刪除的資料夾／文檔先移入垃圾桶，可復原或永久刪除
+   ========================================================== */
+function moveDocsToTrash(docsArray) {
+  if (!docsArray || !docsArray.length) return;
+  const now = formatTime(new Date());
+  docsArray.forEach(function(d) {
+    appData.trash.docs.push(Object.assign({}, d, { deletedAt: now }));
+    delete docHistory[d.id];
+  });
+}
+
+function moveFoldersToTrash(foldersArray) {
+  if (!foldersArray || !foldersArray.length) return;
+  const now = formatTime(new Date());
+  foldersArray.forEach(function(f) {
+    appData.trash.folders.push(Object.assign({}, f, { deletedAt: now }));
+  });
+}
+
+function openTrashModal() {
+  renderTrashList();
+  document.getElementById("trashModal").classList.add("active");
+}
+
+function closeTrashModal() {
+  document.getElementById("trashModal").classList.remove("active");
+}
+
+function renderTrashList() {
+  const list = document.getElementById("trashList");
+  if (!list) return;
+  list.innerHTML = "";
+
+  const folders = appData.trash.folders || [];
+  const docs = appData.trash.docs || [];
+
+  if (folders.length === 0 && docs.length === 0) {
+    list.innerHTML = '<div class="hashtag-filter-empty">垃圾桶目前是空的</div>';
+    return;
+  }
+
+  folders.forEach(function(f) {
+    list.appendChild(createTrashRow(f.icon || '📁', f.name || '未命名資料夾', f.deletedAt, function() {
+      restoreFolderFromTrash(f.id);
+    }, function() {
+      permanentlyDeleteTrashFolder(f.id);
+    }));
+  });
+
+  docs.forEach(function(d) {
+    list.appendChild(createTrashRow(d.icon || '📄', d.title || '無標題文檔', d.deletedAt, function() {
+      restoreDocFromTrash(d.id);
+    }, function() {
+      permanentlyDeleteTrashDoc(d.id);
+    }));
+  });
+}
+
+function createTrashRow(icon, name, deletedAt, onRestore, onPermanentDelete) {
+  const row = document.createElement("div");
+  row.className = "trash-item";
+
+  const iconSpan = document.createElement("span");
+  iconSpan.className = "trash-item-icon";
+  iconSpan.textContent = icon;
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "trash-item-name";
+  nameSpan.textContent = name;
+
+  const metaSpan = document.createElement("span");
+  metaSpan.className = "trash-item-meta";
+  metaSpan.textContent = deletedAt || "";
+
+  const actions = document.createElement("div");
+  actions.className = "trash-item-actions";
+
+  const restoreBtn = document.createElement("button");
+  restoreBtn.className = "btn btn-secondary";
+  restoreBtn.style.cssText = "font-size:11px; padding:3px 8px;";
+  restoreBtn.textContent = "復原";
+  restoreBtn.onclick = onRestore;
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "btn btn-danger";
+  delBtn.style.cssText = "font-size:11px; padding:3px 8px;";
+  delBtn.textContent = "永久刪除";
+  delBtn.onclick = onPermanentDelete;
+
+  actions.appendChild(restoreBtn);
+  actions.appendChild(delBtn);
+
+  row.appendChild(iconSpan);
+  row.appendChild(nameSpan);
+  row.appendChild(metaSpan);
+  row.appendChild(actions);
+  return row;
+}
+
+function restoreFolderFromTrash(folderId) {
+  const idx = appData.trash.folders.findIndex(f => f.id === folderId);
+  if (idx === -1) return;
+  const [folder] = appData.trash.folders.splice(idx, 1);
+  delete folder.deletedAt;
+
+  // 若原本的父資料夾或世界觀已不存在（例如尚未一併復原），改掛回根目錄／目前世界觀，避免復原後在目錄樹中找不到
+  if (folder.parentId && !appData.folders.some(f => f.id === folder.parentId)) {
+    folder.parentId = null;
+  }
+  if (!appData.worldviews.some(w => w.id === folder.worldId)) {
+    folder.worldId = activeWorldId;
+  }
+
+  appData.folders.push(folder);
+  saveData();
+  renderSidebarTree();
+  renderTrashList();
+}
+
+function restoreDocFromTrash(docId) {
+  const idx = appData.trash.docs.findIndex(d => d.id === docId);
+  if (idx === -1) return;
+  const [doc] = appData.trash.docs.splice(idx, 1);
+  delete doc.deletedAt;
+
+  if (doc.folderId && !appData.folders.some(f => f.id === doc.folderId)) {
+    doc.folderId = null;
+  }
+  if (!appData.worldviews.some(w => w.id === doc.worldId)) {
+    doc.worldId = activeWorldId;
+  }
+  if (!Array.isArray(doc.manualTags)) doc.manualTags = computeManualTagsFor(doc.content, doc.tags);
+
+  appData.docs.push(doc);
+  saveData();
+  renderSidebarTree();
+  renderTrashList();
+}
+
+function permanentlyDeleteTrashFolder(folderId) {
+  if (!confirm("確定要永久刪除此資料夾嗎？此動作無法復原！")) return;
+  appData.trash.folders = appData.trash.folders.filter(f => f.id !== folderId);
+  saveData();
+  renderTrashList();
+}
+
+function permanentlyDeleteTrashDoc(docId) {
+  if (!confirm("確定要永久刪除此文檔嗎？此動作無法復原！")) return;
+  appData.trash.docs = appData.trash.docs.filter(d => d.id !== docId);
+  saveData();
+  renderTrashList();
+}
+
+function emptyTrash() {
+  const total = (appData.trash.docs || []).length + (appData.trash.folders || []).length;
+  if (total === 0) { alert("垃圾桶目前是空的。"); return; }
+  if (!confirm("確定要清空垃圾桶嗎？裡面的 " + total + " 個項目將會永久刪除，此動作無法復原！")) return;
+  appData.trash.docs = [];
+  appData.trash.folders = [];
+  saveData();
+  renderTrashList();
 }
 
 function deleteFolderById(folderId) {
@@ -1887,11 +2237,17 @@ function executeBatchDelete() {
     if (d) names.push("📄 " + (d.title || "無標題文檔"));
   });
 
-  const confirmMsg = "確定要刪除選取的 " + totalCount + " 個項目嗎？\n\n" + names.join("\n");
+  const confirmMsg = "確定要刪除選取的 " + totalCount + " 個項目嗎？（會移到垃圾桶，可以復原）\n\n" + names.join("\n");
   if (!confirm(confirmMsg)) return;
+
+  const docsToTrash = appData.docs.filter(d => docIdsToDelete.includes(d.id));
+  const foldersToTrash = appData.folders.filter(f => folderIdsToDelete.includes(f.id));
 
   appData.folders = appData.folders.filter(f => !folderIdsToDelete.includes(f.id));
   appData.docs = appData.docs.filter(d => !docIdsToDelete.includes(d.id));
+
+  moveDocsToTrash(docsToTrash);
+  moveFoldersToTrash(foldersToTrash);
 
   saveData();
   toggleBatchDeleteMode();
@@ -1905,17 +2261,9 @@ function executeBatchDelete() {
 }
 
 function deleteCurrentDocument() {
-  const doc = appData.docs.find(d => d.id === activeDocId);
-  if (!doc) return;
-  if (!confirm("確定要刪除此文檔嗎？")) return;
-
-  appData.docs = appData.docs.filter(d => d.id !== activeDocId);
-  saveData();
-  renderSidebarTree();
-
-  const remainingDocsInWorld = appData.docs.filter(d => d.worldId === activeWorldId);
-  if (remainingDocsInWorld.length > 0) loadDocToEditor(remainingDocsInWorld[0].id);
-  else clearEditorWorkspace();
+  if (!activeDocId) return;
+  // 統一走垃圾桶流程（與右鍵選單「刪除文檔」共用同一套邏輯，確保可以復原）
+  deleteDocById(activeDocId);
 }
 
 /* ==========================================================
