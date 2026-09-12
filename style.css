@@ -453,12 +453,19 @@ main.content-workspace {
   border-bottom: 1px solid var(--border);
   padding: 12px 24px;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
 }
-.meta-left-col { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.meta-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.meta-bottom-section { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
 .breadcrumb-row {
   display: flex;
@@ -468,6 +475,8 @@ main.content-workspace {
   gap: 4px;
   flex-wrap: wrap;
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 .breadcrumb-item {
   position: relative;
@@ -989,7 +998,8 @@ main.content-workspace {
   }
   .sidebar-overlay.active { display: block; }
   .btn-text, .lbl { display: none; }
-  .editor-meta-panel { flex-direction: column; padding: 12px 16px; }
+  .editor-meta-panel { padding: 12px 16px; }
+  .meta-top-row { flex-wrap: wrap; row-gap: 8px; }
   .meta-right-col { width: 100%; justify-content: flex-end; }
   .editor-content-area { padding: 16px; }
 
