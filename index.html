@@ -15,6 +15,7 @@
   <aside class="world-rail" id="appWorldRail">
     <button class="world-rail-btn add-btn" title="新增頂層世界觀" onclick="promptCreateWorldview()">＋</button>
     <div class="world-rail-list" id="worldRailContainer"></div>
+    <button class="world-rail-btn" title="備份完整資料庫" onclick="exportFullDatabaseJSON()">💾</button>
   </aside>
 
   <!-- 中間欄：頂格目錄工具欄 (完全貼齊最上方) -->
@@ -50,7 +51,8 @@
     <!-- 底部設定按鈕 -->
     <div class="directory-footer">
       <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="openPaletteModal()">🎨 標籤分類設定</button>
-      <button class="btn btn-secondary" style="padding:6px 10px;" title="備份完整資料庫" onclick="exportFullDatabaseJSON()">💾 備份</button>
+      <button class="btn btn-secondary" style="padding:6px 10px;" title="匯入文檔（支援 txt / json / html）" onclick="triggerImportFile()">📥 匯入</button>
+      <input type="file" id="importFileInput" accept=".txt,.json,.html,.htm" style="display:none;" onchange="handleImportFileSelected(event)">
     </div>
   </aside>
 
