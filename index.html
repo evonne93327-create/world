@@ -36,12 +36,15 @@
       <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="executeBatchDelete()">刪除選取項</button>
     </div>
 
-    <!-- Google 風格搜尋框 (無底色叉叉) -->
+    <!-- Google 風格搜尋框 (無底色叉叉) + Hashtag 篩選 -->
     <div class="search-wrap">
-      <div class="search-box-inner">
-        <span class="search-lens-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-input-box" placeholder="搜尋欄..." oninput="handleSearchInput(this)">
-        <button type="button" id="searchClearBtn" class="search-clear-btn" title="清空搜尋" onclick="clearSearchInput()">✕</button>
+      <div class="search-row">
+        <div class="search-box-inner">
+          <span class="search-lens-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input-box" placeholder="搜尋欄..." oninput="handleSearchInput(this)">
+          <button type="button" id="searchClearBtn" class="search-clear-btn" title="清空搜尋" onclick="clearSearchInput()">✕</button>
+        </div>
+        <button type="button" id="hashtagFilterBtn" class="icon-sm-btn hashtag-filter-btn" title="Hashtag 篩選" onclick="openHashtagFilterModal()">🏷️</button>
       </div>
     </div>
 
@@ -229,6 +232,19 @@
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
         <button class="btn btn-secondary" onclick="closeMoveModal()">取消</button>
         <button class="btn btn-primary" onclick="confirmMoveFolder()">確認移動</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈窗：Hashtag 篩選（依顏色分類，列出標籤／行數／文章標題，點擊跳轉） -->
+  <div class="modal-overlay" id="hashtagFilterModal">
+    <div class="modal-card" style="width:480px;">
+      <div class="modal-title">🏷️ Hashtag 篩選</div>
+      <p style="font-size:12px; color:var(--text-secondary);">依顏色分類篩選目前世界觀中的 Hashtag，點擊項目可直接跳轉至該文檔段落：</p>
+      <div class="hashtag-filter-colors" id="hashtagFilterColors"></div>
+      <div class="hashtag-filter-list" id="hashtagFilterList"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+        <button class="btn btn-secondary" onclick="closeHashtagFilterModal()">關閉</button>
       </div>
     </div>
   </div>
