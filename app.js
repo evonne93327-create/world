@@ -180,6 +180,27 @@ function toggleSidebarMenu() {
   }
 }
 
+function openSidebarMenu() {
+  const isMobile = window.innerWidth <= 768;
+  const sidebar = document.getElementById("appSidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+
+  if (isMobile) {
+    if (!sidebar.classList.contains("drawer-open")) {
+      sidebar.classList.add("drawer-open");
+      overlay.classList.add("active");
+      history.pushState({ drawer: true }, "");
+    }
+  } else {
+    sidebar.classList.remove("collapsed");
+  }
+}
+
+function handleBreadcrumbDblClick(e) {
+  if (e.target.closest('.breadcrumb-item')) return;
+  openSidebarMenu();
+}
+
 function closeSidebarMobile() {
   document.getElementById("appSidebar").classList.remove("drawer-open");
   document.getElementById("sidebarOverlay").classList.remove("active");
