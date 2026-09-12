@@ -23,6 +23,7 @@
     <div class="directory-top-bar">
       <span class="directory-title">目錄工具欄</span>
       <div class="dir-btn-group">
+        <button class="icon-sm-btn" id="trashViewBtn" title="檢視垃圾桶（復原已刪除的項目）" onclick="openTrashModal()">♻️</button>
         <button class="icon-sm-btn" id="trashToggleBtn" title="批量刪除模式" onclick="toggleBatchDeleteMode()">🗑️</button>
         <button class="icon-sm-btn" title="新增資料夾（若已選取資料夾，將新增於其底下）" onclick="createFolderInCurrentContext()">📁</button>
         <button class="icon-sm-btn" title="新增文檔（若已選取資料夾，將新增於其底下）" onclick="createDocInCurrentContext()">📄</button>
@@ -100,6 +101,8 @@
                 🖼️ <span class="lbl">放圖片</span>
                 <input type="file" id="imgUploadInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
               </label>
+              <button class="action-pill-btn" id="docUndoBtn" title="復原（上一步內文變更）" onclick="undoDocContent()" disabled>↩️ <span class="lbl">復原</span></button>
+              <button class="action-pill-btn" id="docRedoBtn" title="取消復原（下一步內文變更）" onclick="redoDocContent()" disabled>↪️ <span class="lbl">取消復原</span></button>
               <button class="action-pill-btn" onclick="addCurrentDocToCanvas()">📌 <span class="lbl">投射白板</span></button>
               <button class="action-pill-btn btn-danger-pill" onclick="deleteCurrentDocument()">🗑️ <span class="lbl">刪除</span></button>
             </div>
@@ -245,6 +248,19 @@
       <div class="hashtag-filter-list" id="hashtagFilterList"></div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
         <button class="btn btn-secondary" onclick="closeHashtagFilterModal()">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈窗：垃圾桶 -->
+  <div class="modal-overlay" id="trashModal">
+    <div class="modal-card" style="width:480px;">
+      <div class="modal-title">🗑️ 垃圾桶</div>
+      <p style="font-size:12px; color:var(--text-secondary);">已刪除的資料夾與文檔會暫存在這裡，可以復原或永久刪除：</p>
+      <div class="trash-list" id="trashList"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+        <button class="btn btn-danger" style="font-size:11px; padding:4px 8px;" onclick="emptyTrash()">清空垃圾桶</button>
+        <button class="btn btn-secondary" onclick="closeTrashModal()">關閉</button>
       </div>
     </div>
   </div>
