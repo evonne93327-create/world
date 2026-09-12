@@ -463,6 +463,7 @@ function createDocRowElement(doc) {
 
   row.innerHTML = 
     '<div class="node-left">' +
+      '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>' +
       '<span class="node-icon">' + (doc.icon || '📄') + '</span>' +
       '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
     '</div>' +
