@@ -282,6 +282,14 @@ aside.sidebar-directory.collapsed {
   gap: 6px;
 }
 
+.node-row-outer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin: 1px 0;
+  user-select: none;
+}
 .node-row {
   display: flex;
   align-items: center;
@@ -289,24 +297,26 @@ aside.sidebar-directory.collapsed {
   padding: 5px 6px;
   border-radius: 4px;
   cursor: pointer;
-  margin: 1px 0;
   font-size: 13px;
   color: var(--text-secondary);
   user-select: none;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
-.node-row:hover .node-select-box { background: var(--bg-sunken); color: var(--text-primary); }
-.node-row.selected .node-select-box {
+.node-row:hover { background: var(--bg-sunken); color: var(--text-primary); }
+.node-row.selected {
   background: #E2EAF4;
   border: 1px solid #BCCFDF;
   color: #1E3A5F;
 }
-.node-row.active .node-select-box {
+.node-row.active {
   background: var(--accent-light);
   border: 1px solid var(--accent-line);
   color: var(--accent-hover);
   font-weight: 600;
 }
-.node-row.batch-checked .node-select-box {
+.node-row.batch-checked {
   background: #FBE4E4;
   border: 1px solid #E8AFAF;
   color: #A23B3B;
@@ -315,23 +325,6 @@ aside.sidebar-directory.collapsed {
   display: flex;
   align-items: center;
   gap: 6px;
-  overflow: hidden;
-  flex: 1;
-  min-width: 0;
-}
-.node-select-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
-  flex: 1;
-  min-width: 0;
-  padding: 5px 4px;
-  margin: -5px -4px;
-  border-radius: 4px;
-  border: 1px solid transparent;
-}
-.node-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -871,7 +864,7 @@ main.content-workspace {
 .ctx-menu-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .ctx-menu-divider { height: 1px; background: var(--border-soft); margin: 4px 4px; flex-shrink: 0; }
 
-.node-row, .world-rail-btn {
+.node-row-outer, .world-rail-btn {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
 }
@@ -1006,7 +999,7 @@ main.content-workspace {
     font-size: 13.5px;
     border-radius: 8px;
   }
-  .node-row:active .node-select-box { background: var(--bg-sunken); }
+  .node-row:active { background: var(--bg-sunken); }
   .folder-caret { width: 20px; height: 20px; font-size: 11px; }
   .node-icon { font-size: 15px; }
 
