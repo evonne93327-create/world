@@ -1169,5 +1169,28 @@ main.content-workspace {
 
 @media (max-width: 768px) {
   .quickjump-fab { bottom: calc(56px + var(--safe-b) + 16px); right: 16px; width: 44px; height: 44px; font-size: 18px; }
-  .quickjump-panel { width: 85vw; }
+
+  /* 手機版改為置中浮層卡片，而非靠右側邊欄 */
+  .quickjump-panel {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: 88vw;
+    max-width: 380px;
+    max-height: 72vh;
+    border-left: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    transform: translate(-50%, -50%) scale(0.94);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .quickjump-panel.active {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
