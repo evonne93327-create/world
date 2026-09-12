@@ -825,11 +825,17 @@ function openQuickJumpPanel() {
   renderQuickJumpList(doc ? (doc.content || "") : "");
   document.getElementById("quickJumpPanel").classList.add("active");
   document.getElementById("quickJumpOverlay").classList.add("active");
+  const fab = document.getElementById("quickJumpFab");
+  fab.textContent = "✕";
+  fab.title = "關閉快速跳轉";
 }
 
 function closeQuickJumpPanel() {
   document.getElementById("quickJumpPanel").classList.remove("active");
   document.getElementById("quickJumpOverlay").classList.remove("active");
+  const fab = document.getElementById("quickJumpFab");
+  fab.textContent = "📑";
+  fab.title = "章節 / Hashtag 快速跳轉";
 }
 
 function renderQuickJumpList(content) {
