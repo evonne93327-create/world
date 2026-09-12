@@ -557,6 +557,8 @@ main.content-workspace {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .btn-add-tag {
   background: var(--bg-sunken);
@@ -597,10 +599,16 @@ main.content-workspace {
   flex-direction: column;
   gap: 12px;
 }
+.content-textarea-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 400px;
+}
 .content-textarea {
   flex: 1;
   width: 100%;
-  min-height: 400px;
+  min-height: 0;
   border: none !important;
   outline: none !important;
   resize: none;
@@ -610,6 +618,35 @@ main.content-workspace {
   font-family: var(--font-ui);
   background: transparent;
 }
+.content-undo-redo-group {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+.content-undo-redo-btn {
+  border: none;
+  background: transparent;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+.content-undo-redo-btn:hover { background: var(--bg-sunken); }
+.content-undo-redo-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.content-undo-redo-btn:disabled:hover { background: transparent; }
 .toc-card {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
@@ -825,6 +862,9 @@ main.content-workspace {
 .color-picker-popup.active { display: flex; }
 .picker-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
 .picker-option:hover { background: var(--bg-sunken); }
+.picker-option-divider { height: 1px; background: var(--border); margin: 4px 2px; }
+.picker-option-danger { color: var(--danger); }
+.picker-option-danger:hover { background: var(--danger-light); }
 
 /* Hashtag 篩選彈窗 */
 .hashtag-filter-colors {
@@ -1172,7 +1212,8 @@ main.content-workspace {
   .action-pill-btn { padding: 9px 12px; }
 
   .doc-title-input { font-size: 19px; }
-  .content-textarea { font-size: 15px; line-height: 1.85; min-height: 300px; }
+  .content-textarea { font-size: 15px; line-height: 1.85; }
+  .content-textarea-wrap { min-height: 300px; }
 
   .ctx-menu {
     left: 0 !important;
