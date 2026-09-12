@@ -220,6 +220,13 @@ aside.sidebar-directory.collapsed {
   padding: 8px 12px;
   border-bottom: 1px solid var(--bg-sidebar);
 }
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-row .search-box-inner { flex: 1; min-width: 0; }
+.hashtag-filter-btn { flex-shrink: 0; border: 1px solid var(--border); }
 .search-box-inner {
   display: flex;
   align-items: center;
@@ -803,6 +810,79 @@ main.content-workspace {
 .color-picker-popup.active { display: flex; }
 .picker-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
 .picker-option:hover { background: var(--bg-sunken); }
+
+/* Hashtag 篩選彈窗 */
+.hashtag-filter-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hashtag-filter-color-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+}
+.hashtag-filter-color-chip:hover { background: var(--bg-card); }
+.hashtag-filter-color-chip.active { border-color: var(--accent); color: var(--text-primary); }
+.hashtag-filter-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.hashtag-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.hashtag-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+}
+.hashtag-filter-item:hover { background: var(--bg-sunken); }
+.hashtag-filter-item-tag { font-weight: 700; white-space: nowrap; }
+.hashtag-filter-item-line {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-sunken);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.hashtag-filter-item-title {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+.hashtag-filter-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+}
 
 /* 自訂右鍵選單 */
 .ctx-menu-overlay {
