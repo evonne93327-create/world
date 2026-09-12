@@ -1089,7 +1089,7 @@ main.content-workspace {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 60;
+  z-index: 75;
   transition: transform 0.2s ease;
 }
 .quickjump-fab:hover { transform: scale(1.08); }
@@ -1170,27 +1170,31 @@ main.content-workspace {
 @media (max-width: 768px) {
   .quickjump-fab { bottom: calc(56px + var(--safe-b) + 16px); right: 16px; width: 44px; height: 44px; font-size: 18px; }
 
-  /* 手機版改為置中浮層卡片，而非靠右側邊欄 */
+  /* 手機版改為從按鈕右下角「彈出」的 Popover，並隱藏標題列叉叉（改由按鈕本身切換成 ✕ 關閉） */
+  .quickjump-overlay { background: transparent; }
+
   .quickjump-panel {
-    top: 50%;
-    left: 50%;
-    right: auto;
-    bottom: auto;
-    width: 88vw;
-    max-width: 380px;
-    max-height: 72vh;
-    border-left: none;
+    top: auto;
+    left: auto;
+    right: 16px;
+    bottom: calc(56px + var(--safe-b) + 16px + 44px + 10px);
+    width: calc(100vw - 32px);
+    max-width: 320px;
+    max-height: 58vh;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    transform: translate(-50%, -50%) scale(0.94);
+    transform-origin: bottom right;
+    transform: translateY(8px) scale(0.95);
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition: transform 0.18s ease, opacity 0.18s ease;
   }
   .quickjump-panel.active {
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
     pointer-events: auto;
   }
+
+  .quickjump-close-btn { display: none; }
 }
