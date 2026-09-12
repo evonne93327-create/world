@@ -296,7 +296,7 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
 
     const isCollapsed = !!collapsedFolders[folder.id];
     const folderRow = document.createElement("div");
-    folderRow.className = "node-row" + (folder.id === activeFolderId ? " selected" : "");
+    folderRow.className = "node-row-outer";
     folderRow.draggable = true;
 
     folderRow.ondragstart = function(e) {
@@ -304,8 +304,9 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       e.dataTransfer.setData("text/plain", JSON.stringify({ type: "folder", id: folder.id }));
     };
 
+    let rowStateClass = (folder.id === activeFolderId ? " selected" : "");
     if (isBatchDeleteMode && batchSelectedFolders.has(folder.id)) {
-      folderRow.classList.add("batch-checked");
+      rowStateClass += " batch-checked";
     }
 
     folderRow.onclick = function(e) {
@@ -330,12 +331,12 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       : '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>';
 
     folderRow.innerHTML = 
-      '<div class="node-left">' +
-        caretHtml +
-        '<span class="node-select-box">' +
+      caretHtml +
+      '<div class="node-row' + rowStateClass + '">' +
+        '<div class="node-left">' +
           '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
           '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
-        '</span>' +
+        '</div>' +
       '</div>';
 
     const iconSpan = folderRow.querySelector('.node-icon');
@@ -438,9 +439,10 @@ function isDescendantOf(parentCheckId, targetFolderId) {
 
 function createDocRowElement(doc) {
   const row = document.createElement("div");
-  row.className = "node-row " + (doc.id === activeDocId ? "active" : "");
+  row.className = "node-row-outer";
+  let rowStateClass = (doc.id === activeDocId ? " active" : "");
   if (isBatchDeleteMode && batchSelectedDocs.has(doc.id)) {
-    row.classList.add("batch-checked");
+    rowStateClass += " batch-checked";
   }
   row.draggable = true;
   row.ondragstart = function(e) {
@@ -464,14 +466,14 @@ function createDocRowElement(doc) {
   const displayTitle = doc.title || "無標題文檔";
 
   row.innerHTML = 
-    '<div class="node-left">' +
-      '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>' +
-      '<span class="node-select-box">' +
+    '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>' +
+    '<div class="node-row' + rowStateClass + '">' +
+      '<div class="node-left">' +
         '<span class="node-icon">' + (doc.icon || '📄') + '</span>' +
         '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
-      '</span>' +
-    '</div>' +
-    '<div style="font-size:10px; color:var(--text-muted);">' + (doc.wordCount || 0) + '字</div>';
+      '</div>' +
+      '<div style="font-size:10px; color:var(--text-muted);">' + (doc.wordCount || 0) + '字</div>' +
+    '</div>';
 
   const iconSpan = row.querySelector('.node-icon');
   if (iconSpan) {
