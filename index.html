@@ -86,30 +86,32 @@
       <!-- 1. 文檔編輯區 -->
       <section id="editorView" class="view-panel">
         <div class="editor-meta-panel">
-          <div class="meta-left-col">
+          <div class="meta-top-row">
             <!-- 類 Windows 導航麵包屑 -->
-            <div class="breadcrumb-row" id="docBreadcrumbBar"></div>
-            
+            <div class="breadcrumb-row" id="docBreadcrumbBar" ondblclick="handleBreadcrumbDblClick(event)"></div>
+
+            <div class="meta-right-col">
+              <label class="action-pill-btn" title="插入圖片">
+                🖼️ <span class="lbl">放圖片</span>
+                <input type="file" id="imgUploadInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+              </label>
+              <button class="action-pill-btn" onclick="addCurrentDocToCanvas()">📌 <span class="lbl">投射白板</span></button>
+              <button class="action-pill-btn btn-danger-pill" onclick="deleteCurrentDocument()">🗑️ <span class="lbl">刪除</span></button>
+            </div>
+          </div>
+
+          <div class="meta-bottom-section">
             <div class="doc-title-line">
               <button class="doc-icon-picker-btn" id="docIconBtn" title="更換圖示" onclick="openIconPicker('doc', activeDocId)">📄</button>
               <input type="text" id="docTitleInput" class="doc-title-input" placeholder="文檔標題..." oninput="onTitleChange()">
             </div>
-            
+
             <div class="doc-stats-line">
               <span>字數：<strong class="stat-pill" id="statWordCount">0</strong></span>
               <span>更新時間：<span id="statUpdatedAt">--</span></span>
             </div>
-            
-            <div class="hashtag-wrap" id="liveTagToolbar"></div>
-          </div>
 
-          <div class="meta-right-col">
-            <label class="action-pill-btn" title="插入圖片">
-              🖼️ <span class="lbl">放圖片</span>
-              <input type="file" id="imgUploadInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
-            </label>
-            <button class="action-pill-btn" onclick="addCurrentDocToCanvas()">📌 <span class="lbl">投射白板</span></button>
-            <button class="action-pill-btn btn-danger-pill" onclick="deleteCurrentDocument()">🗑️ <span class="lbl">刪除</span></button>
+            <div class="hashtag-wrap" id="liveTagToolbar"></div>
           </div>
         </div>
 
