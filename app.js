@@ -1591,6 +1591,8 @@ function switchView(view, pushHistory = true) {
   document.getElementById("tabCanvasBtn").classList.toggle("active", view === 'canvas');
   document.getElementById("editorView").style.display = (view === 'editor') ? 'flex' : 'none';
   document.getElementById("canvasView").style.display = (view === 'canvas') ? 'block' : 'none';
+  document.getElementById("quickJumpFab").style.display = (view === 'editor') ? 'flex' : 'none';
+  if (view !== 'editor') closeQuickJumpPanel();
   if (view === 'canvas') {
     renderCanvas();
     if (pushHistory) history.pushState({ view: 'canvas' }, "");
