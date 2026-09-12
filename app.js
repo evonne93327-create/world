@@ -1353,6 +1353,70 @@ function jumpToHashtagOccurrence(docId, lineIndex) {
   if (window.innerWidth <= 768) closeSidebarMobile();
 }
 
+// 通用長按偵測：支援滑鼠與觸控，離開／滑動超過容許範圍會取消計時，
+// 觸發長按後也會攔截緊接著的 click，避免放開時被當成一般點擊誤動作。
+function attachLongPress(el, callback, duration) {
+  duration = duration || 550;
+  const MOVE_TOLERANCE = 10;
+  let timer = null;
+  let didFire = false;
+  let startX = 0, startY = 0;
+
+  function getPoint(e) {
+    return e.touches && e.touches.length ? e.touches[0] : e;
+  }
+
+  function start(e) {
+    if (e.type === "mousedown" && e.button !== 0) return; // 僅回應左鍵
+    didFire = false;
+    const point = getPoint(e);
+    startX = point.clientX;
+    startY = point.clientY;
+    clearTimeout(timer);
+    timer = setTimeout(function() {
+      didFire = true;
+      timer = null;
+      callback(e);
+    }, duration);
+  }
+
+  function move(e) {
+    if (timer === null) return;
+    const point = getPoint(e);
+    if (Math.abs(point.clientX - startX) > MOVE_TOLERANCE || Math.abs(point.clientY - startY) > MOVE_TOLERANCE) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+
+  function cancel() {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+
+  function suppressTrailingClick(e) {
+    if (didFire) {
+      e.preventDefault();
+      e.stopPropagation();
+      didFire = false;
+    }
+  }
+
+  el.addEventListener("mousedown", start);
+  el.addEventListener("mousemove", move);
+  el.addEventListener("mouseup", cancel);
+  el.addEventListener("mouseleave", cancel);
+
+  el.addEventListener("touchstart", start, { passive: true });
+  el.addEventListener("touchmove", move, { passive: true });
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchcancel", cancel);
+
+  el.addEventListener("click", suppressTrailingClick, true);
+}
+
 function renderLiveHashtags(tags) {
   const bar = document.getElementById("liveTagToolbar");
   bar.innerHTML = "";
@@ -1365,24 +1429,13 @@ function renderLiveHashtags(tags) {
     chip.className = "tag-chip";
     chip.style.backgroundColor = palette.bg;
     chip.style.color = palette.text;
-    
-    chip.innerHTML = 
-      '<span>#' + escapeHtml(tag) + '</span>' +
-      '<span class="tag-chip-remove" title="移除此標籤">✕</span>';
-    chip.title = "雙擊以指定分類顏色";
 
-    chip.ondblclick = function(e) {
-      e.stopPropagation();
+    chip.innerHTML = '<span>#' + escapeHtml(tag) + '</span>';
+    chip.title = "長按以指定分類顏色／移除標籤";
+
+    attachLongPress(chip, function() {
       openColorPicker(tag, chip);
-    };
-
-    const removeBtn = chip.querySelector('.tag-chip-remove');
-    if (removeBtn) {
-      removeBtn.onclick = function(e) {
-        e.stopPropagation();
-        removeHashtagFromDoc(tag);
-      };
-    }
+    });
 
     bar.appendChild(chip);
   });
@@ -2624,6 +2677,19 @@ function openColorPicker(tag, anchorElement) {
     };
     popover.appendChild(opt);
   });
+
+  const divider = document.createElement("div");
+  divider.className = "picker-option-divider";
+  popover.appendChild(divider);
+
+  const removeOpt = document.createElement("div");
+  removeOpt.className = "picker-option picker-option-danger";
+  removeOpt.innerHTML = '<span style="width:14px; text-align:center;">✕</span><span>移除此標籤</span>';
+  removeOpt.onclick = function() {
+    popover.classList.remove("active");
+    removeHashtagFromDoc(tag);
+  };
+  popover.appendChild(removeOpt);
 
   const rect = anchorElement.getBoundingClientRect();
   popover.style.top = (rect.bottom + window.scrollY + 6) + "px";
