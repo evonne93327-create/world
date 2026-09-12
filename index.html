@@ -129,6 +129,20 @@
 💡 章節標註：輸入「# 第一章 啟程」或「第1章」系統會自動在頂部生成快速跳轉按鈕。
 💡 標籤標註：輸入「#帝國軍方 #反抗勢力」系統會自動抽取並套色；點擊上方 Hashtag 名稱可直接定位到內文段落！" oninput="onContentChange()"></textarea>
         </div>
+
+        <!-- 章節 / Hashtag 快速跳轉：浮動按鈕 + 側邊欄 -->
+        <button class="quickjump-fab" id="quickJumpFab" title="章節 / Hashtag 快速跳轉" onclick="toggleQuickJumpPanel()">📑</button>
+        <div class="quickjump-overlay" id="quickJumpOverlay" onclick="closeQuickJumpPanel()"></div>
+        <aside class="quickjump-panel" id="quickJumpPanel">
+          <div class="quickjump-header">
+            <div class="quickjump-header-top">
+              <div class="quickjump-doc-title" id="quickJumpDocTitle">未命名文檔</div>
+              <button class="quickjump-close-btn" title="關閉" onclick="closeQuickJumpPanel()">✕</button>
+            </div>
+            <div class="quickjump-subtitle">章節與 Hashtag 快速跳轉</div>
+          </div>
+          <div class="quickjump-list" id="quickJumpList"></div>
+        </aside>
       </section>
 
       <!-- 2. 白板關係區 (Graphs) -->
