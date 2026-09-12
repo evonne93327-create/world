@@ -13,6 +13,43 @@ const DEFAULT_PALETTES = {
 
 const COMMON_ICONS = ["📁", "🌍", "⚔️", "🛡️", "📜", "🏰", "🧙", "🐉", "🔮", "🔥", "💎", "🏛️", "👑", "🗡️", "🏹", "📖", "✨", "🔖"];
 
+/* ==========================================================
+   Hashtag / 章節標題 共用偵測邏輯
+   （章節標題行不會被誤判為 Hashtag，避免像 #楔子、#Chapter1 這種
+   沒加空格、緊貼 # 的章節寫法被誤抓成標籤）
+   ========================================================== */
+const MARKDOWN_HEADING_REGEX = /^#\s+(.+)/;
+const CHAPTER_LINE_REGEX = /^(第[0-9一二三四五六七八九十百]+[章回卷節]|Chapter\s+[0-9]+)/i;
+
+function isChapterHeadingLine(trimmedLine) {
+  return MARKDOWN_HEADING_REGEX.test(trimmedLine) || CHAPTER_LINE_REGEX.test(trimmedLine);
+}
+
+// 從單一行文字中抽取 Hashtag（章節標題行會整行略過，不偵測標籤）
+function extractHashtagsFromLine(line) {
+  const trimmed = line.trim();
+  if (isChapterHeadingLine(trimmed)) return [];
+  const tags = [];
+  const tagRegex = /#([^\s#]+)/g;
+  let m;
+  while ((m = tagRegex.exec(line)) !== null) {
+    const t = m[1].trim();
+    if (t) tags.push(t);
+  }
+  return tags;
+}
+
+// 從整篇內文抽取不重複的 Hashtag 清單（依出現順序）
+function extractHashtagsFromText(text) {
+  const result = [];
+  (text || "").split("\n").forEach(function(line) {
+    extractHashtagsFromLine(line).forEach(function(t) {
+      if (!result.includes(t)) result.push(t);
+    });
+  });
+  return result;
+}
+
 const INITIAL_APP_DATA = {
   colorPalette: Object.assign({}, DEFAULT_PALETTES),
   tagSettings: {
@@ -20,6 +57,7 @@ const INITIAL_APP_DATA = {
     "反抗組織": "c_rose",
     "主角群": "c_purple"
   },
+  trash: { docs: [], folders: [] },
   worldviews: [
     {
       id: "w_main",
@@ -117,6 +155,13 @@ function computeManualTagsFor(content, tags) {
     d.manualTags = computeManualTagsFor(d.content, d.tags);
   });
 })();
+
+// 資料遷移：補上垃圾桶欄位（舊資料或舊版完整備份可能沒有這個欄位）
+if (!appData.trash || typeof appData.trash !== "object") {
+  appData.trash = { docs: [], folders: [] };
+}
+if (!Array.isArray(appData.trash.docs)) appData.trash.docs = [];
+if (!Array.isArray(appData.trash.folders)) appData.trash.folders = [];
 
 function saveData() {
   localStorage.setItem("novel_multi_world_data_v5", JSON.stringify(appData));
@@ -298,7 +343,7 @@ function renderWorldRail() {
     const btn = document.createElement("button");
     btn.className = "world-rail-btn " + (world.id === activeWorldId ? "active" : "");
     btn.title = world.name;
-    btn.innerHTML = world.icon || "🌐";
+    btn.textContent = world.icon || "🌐";
 
     btn.onclick = function() {
       selectWorld(world.id);
@@ -377,7 +422,7 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
       caretHtml +
       '<div class="node-row' + rowStateClass + '">' +
         '<div class="node-left">' +
-          '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
+          '<span class="node-icon">' + escapeHtml(folder.icon || '📁') + '</span>' +
           '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
         '</div>' +
       '</div>';
@@ -512,7 +557,7 @@ function createDocRowElement(doc) {
     '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>' +
     '<div class="node-row' + rowStateClass + '">' +
       '<div class="node-left">' +
-        '<span class="node-icon">' + (doc.icon || '📄') + '</span>' +
+        '<span class="node-icon">' + escapeHtml(doc.icon || '📄') + '</span>' +
         '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
       '</div>' +
       '<div style="font-size:10px; color:var(--text-muted);">' + (doc.wordCount || 0) + '字</div>' +
@@ -668,7 +713,7 @@ function createBreadcrumbDropdownItem(text, onClickMain, childrenObj) {
     childrenObj.folders.forEach(function(f) {
       const opt = document.createElement("div");
       opt.className = "breadcrumb-dropdown-item";
-      opt.innerHTML = `<span>${f.icon || '📁'}</span><span>${escapeHtml(f.name)}</span>`;
+      opt.innerHTML = `<span>${escapeHtml(f.icon || '📁')}</span><span>${escapeHtml(f.name)}</span>`;
       opt.onclick = function(e) {
         e.stopPropagation();
         navigateToBreadcrumbFolder(f);
@@ -680,7 +725,7 @@ function createBreadcrumbDropdownItem(text, onClickMain, childrenObj) {
     childrenObj.docs.forEach(function(d) {
       const opt = document.createElement("div");
       opt.className = "breadcrumb-dropdown-item";
-      opt.innerHTML = `<span>${d.icon || '📄'}</span><span>${escapeHtml(d.title || '無標題')}</span>`;
+      opt.innerHTML = `<span>${escapeHtml(d.icon || '📄')}</span><span>${escapeHtml(d.title || '無標題')}</span>`;
       opt.onclick = function(e) {
         e.stopPropagation();
         loadDocToEditor(d.id);
@@ -703,6 +748,7 @@ function closeAllBreadcrumbDropdowns() {
    5. 文檔編輯與狀態
    ========================================================== */
 function loadDocToEditor(docId) {
+  flushPendingContentPersist();
   activeDocId = docId;
   const doc = appData.docs.find(d => d.id === docId);
   if (!doc) return;
@@ -755,15 +801,7 @@ function onContentChange() {
   document.getElementById("statWordCount").textContent = wordCount;
 
   if (!Array.isArray(doc.manualTags)) doc.manualTags = [];
-  const textTags = [];
-  const regex = /#([^\s#]+)/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const t = match[1].trim();
-    if (t && !t.startsWith("第") && !textTags.includes(t)) {
-      textTags.push(t);
-    }
-  }
+  const textTags = extractHashtagsFromText(text);
   // Hashtag 即時同步：內文新增或刪除 # 標籤時，標籤列表要即時跟著增加或減少，
   // 不能只增不減；透過「＋標籤」手動加入、未寫在內文中的標籤則予以保留。
   const mergedTags = textTags.slice();
@@ -779,17 +817,44 @@ function onContentChange() {
   doc.updatedAt = formatTime(new Date());
   document.getElementById("statUpdatedAt").textContent = doc.updatedAt;
 
-  saveData();
+  // 即時、成本低的畫面更新：每次打字都立刻反映
   renderBreadcrumb();
   renderTOC(text);
   renderLiveHashtags(doc.tags);
-  renderSidebarTree();
   if (document.getElementById("quickJumpPanel").classList.contains("active")) {
     renderQuickJumpList(text);
     document.getElementById("quickJumpWordCount").textContent = wordCount;
     document.getElementById("quickJumpUpdatedAt").textContent = doc.updatedAt;
   }
+
+  // 成本較高的存檔／整棵目錄樹重繪：延遲到停止輸入後才執行，避免打字時卡頓
+  scheduleContentPersist();
 }
+
+/* 打字時的效能優化：saveData() 會序列化整個 appData（可能含圖片 base64），
+   renderSidebarTree() 則會重繪整棵目錄樹，兩者都不需要每個按鍵都執行一次，
+   停止輸入一小段時間後再統一處理即可；分頁關閉/切換文檔前一定會先補存檔，避免遺失內容。 */
+let contentPersistTimer = null;
+
+function scheduleContentPersist() {
+  if (contentPersistTimer) clearTimeout(contentPersistTimer);
+  contentPersistTimer = setTimeout(function() {
+    contentPersistTimer = null;
+    saveData();
+    renderSidebarTree();
+  }, 400);
+}
+
+function flushPendingContentPersist() {
+  if (contentPersistTimer) {
+    clearTimeout(contentPersistTimer);
+    contentPersistTimer = null;
+    saveData();
+    renderSidebarTree();
+  }
+}
+
+window.addEventListener("beforeunload", flushPendingContentPersist);
 
 function renderTOC(content) {
   const container = document.getElementById("tocLinksContainer");
@@ -801,9 +866,9 @@ function renderTOC(content) {
 
   lines.forEach(function(line, idx) {
     const trimmed = line.trim();
-    if (/^#\s+(.+)/.test(trimmed)) {
+    if (MARKDOWN_HEADING_REGEX.test(trimmed)) {
       chapters.push({ title: trimmed.replace(/^#\s+/, ''), lineIndex: idx, fullText: trimmed });
-    } else if (/^(第[0-9一二三四五六七八九十百]+[章回卷節]|Chapter\s+[0-9]+)/i.test(trimmed)) {
+    } else if (CHAPTER_LINE_REGEX.test(trimmed)) {
       chapters.push({ title: trimmed.substring(0, 24), lineIndex: idx, fullText: trimmed });
     }
   });
@@ -874,19 +939,15 @@ function renderQuickJumpList(content) {
 
   lines.forEach(function(line, idx) {
     const trimmed = line.trim();
-    if (/^#\s+(.+)/.test(trimmed)) {
+    if (MARKDOWN_HEADING_REGEX.test(trimmed)) {
       entries.push({ type: 'chapter', label: trimmed.replace(/^#\s+/, ''), lineIndex: idx });
-    } else if (/^(第[0-9一二三四五六七八九十百]+[章回卷節]|Chapter\s+[0-9]+)/i.test(trimmed)) {
+    } else if (CHAPTER_LINE_REGEX.test(trimmed)) {
       entries.push({ type: 'chapter', label: trimmed.substring(0, 30), lineIndex: idx });
     }
 
-    const tagRegex = /#([^\s#]+)/g;
-    let m;
-    while ((m = tagRegex.exec(line)) !== null) {
-      const tagName = m[1].trim();
-      if (!tagName || tagName.startsWith("第")) continue;
+    extractHashtagsFromLine(line).forEach(function(tagName) {
       entries.push({ type: 'tag', label: tagName, lineIndex: idx });
-    }
+    });
   });
 
   entries.sort(function(a, b) { return a.lineIndex - b.lineIndex; });
@@ -997,13 +1058,9 @@ function collectHashtagOccurrences(colorFilter) {
     const seenTags = {};
 
     lines.forEach(function(line, idx) {
-      const tagRegex = /#([^\s#]+)/g;
-      let m;
-      while ((m = tagRegex.exec(line)) !== null) {
-        const tagName = m[1].trim();
-        if (!tagName || tagName.startsWith("第")) continue;
+      extractHashtagsFromLine(line).forEach(function(tagName) {
         const colorId = appData.tagSettings[tagName] || "c_gray";
-        if (colorFilter && colorId !== colorFilter) continue;
+        if (colorFilter && colorId !== colorFilter) return;
         seenTags[tagName] = true;
         results.push({
           tag: tagName,
@@ -1012,7 +1069,7 @@ function collectHashtagOccurrences(colorFilter) {
           docId: doc.id,
           docTitle: doc.title || "無標題文檔"
         });
-      }
+      });
     });
 
     // 手動加入、內文中沒有對應文字的標籤，仍列出但無行數可跳轉（跳轉至文檔開頭）
@@ -1132,12 +1189,21 @@ function renderLiveHashtags(tags) {
     
     chip.innerHTML = 
       '<span>#' + escapeHtml(tag) + '</span>' +
-      '<span style="font-size:9px; opacity:0.7;">▼</span>';
+      '<span style="font-size:9px; opacity:0.7;">▼</span>' +
+      '<span class="tag-chip-remove" title="移除此標籤">✕</span>';
 
     chip.onclick = function(e) {
       e.stopPropagation();
       openColorPicker(tag, chip);
     };
+
+    const removeBtn = chip.querySelector('.tag-chip-remove');
+    if (removeBtn) {
+      removeBtn.onclick = function(e) {
+        e.stopPropagation();
+        removeHashtagFromDoc(tag);
+      };
+    }
 
     bar.appendChild(chip);
   });
@@ -1168,6 +1234,52 @@ function renderLiveHashtags(tags) {
     }
   };
   bar.appendChild(addBtn);
+}
+
+// 移除某個 Hashtag：若它同時存在於內文中，詢問是否連同內文的 #標籤 文字一併刪除
+// （不然下次編輯內文時，即時同步機制又會把它重新偵測回來）。
+function removeHashtagFromDoc(tag) {
+  const doc = appData.docs.find(d => d.id === activeDocId);
+  if (!doc) return;
+
+  const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const inlineRe = new RegExp('#' + escaped + '(?=[\\s#]|$)', 'g');
+  const existsInContent = inlineRe.test(doc.content || "");
+
+  if (existsInContent) {
+    const alsoRemoveFromText = confirm(
+      '標籤「#' + tag + '」目前仍出現在內文中，若只移除標籤而不刪除內文文字，' +
+      '下次編輯內文時它又會被重新偵測回來。\n\n是否要一併刪除內文中所有的「#' + tag + '」文字？'
+    );
+    if (!alsoRemoveFromText) return;
+
+    inlineRe.lastIndex = 0;
+    doc.content = (doc.content || "").replace(inlineRe, "");
+    document.getElementById("docContentInput").value = doc.content;
+  }
+
+  if (Array.isArray(doc.manualTags)) {
+    doc.manualTags = doc.manualTags.filter(function(t) { return t !== tag; });
+  }
+  doc.tags = extractHashtagsFromText(doc.content || "").concat(doc.manualTags || []);
+  doc.tags = doc.tags.filter(function(t, idx) { return doc.tags.indexOf(t) === idx; });
+
+  const wordText = doc.content || "";
+  const cjk = (wordText.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const eng = (wordText.replace(/[\u4e00-\u9fa5]/g, ' ').match(/\b[a-zA-Z0-9_]+\b/g) || []).length;
+  doc.wordCount = cjk + eng;
+  doc.updatedAt = formatTime(new Date());
+
+  document.getElementById("statWordCount").textContent = doc.wordCount;
+  document.getElementById("statUpdatedAt").textContent = doc.updatedAt;
+
+  saveData();
+  renderTOC(doc.content || "");
+  renderLiveHashtags(doc.tags);
+  renderSidebarTree();
+  if (document.getElementById("quickJumpPanel").classList.contains("active")) {
+    renderQuickJumpList(doc.content || "");
+  }
 }
 
 /* ==========================================================
@@ -1429,7 +1541,7 @@ function buildDocMenuItems(doc) {
 }
 
 function deleteFolderById(folderId) {
-  if (!confirm("確定要刪除此資料夾嗎？（內含子資料夾與文檔也會一併刪除）")) return;
+  if (!confirm("確定要刪除此資料夾嗎？（內含子資料夾與文檔會一併移到垃圾桶，可以復原）")) return;
 
   const idsToDelete = [folderId];
   let changed = true;
@@ -1445,8 +1557,14 @@ function deleteFolderById(folderId) {
 
   const willDeleteActiveDoc = appData.docs.some(d => d.id === activeDocId && idsToDelete.includes(d.folderId));
 
+  const docsToTrash = appData.docs.filter(d => idsToDelete.includes(d.folderId));
+  const foldersToTrash = appData.folders.filter(f => idsToDelete.includes(f.id));
+
   appData.docs = appData.docs.filter(d => !idsToDelete.includes(d.folderId));
   appData.folders = appData.folders.filter(f => !idsToDelete.includes(f.id));
+
+  moveDocsToTrash(docsToTrash);
+  moveFoldersToTrash(foldersToTrash);
 
   if (activeFolderId && idsToDelete.includes(activeFolderId)) activeFolderId = null;
 
@@ -1461,10 +1579,14 @@ function deleteFolderById(folderId) {
 }
 
 function deleteDocById(docId) {
-  if (!confirm("確定要刪除此文檔嗎？")) return;
+  const idx = appData.docs.findIndex(d => d.id === docId);
+  if (idx === -1) return;
+  if (!confirm("確定要刪除此文檔嗎？（會移到垃圾桶，可以復原）")) return;
   const wasActive = docId === activeDocId;
 
-  appData.docs = appData.docs.filter(d => d.id !== docId);
+  const [doc] = appData.docs.splice(idx, 1);
+  moveDocsToTrash([doc]);
+
   saveData();
   renderSidebarTree();
 
@@ -1822,14 +1944,14 @@ function openBatchExportModal() {
     wTitle.style.fontWeight = "700";
     wTitle.style.fontSize = "13px";
     wTitle.style.margin = "6px 0 2px 0";
-    wTitle.innerHTML = "<span>" + (w.icon || '🌐') + " " + escapeHtml(w.name) + "</span>";
+    wTitle.innerHTML = "<span>" + escapeHtml(w.icon || '🌐') + " " + escapeHtml(w.name) + "</span>";
     container.appendChild(wTitle);
 
     const docs = appData.docs.filter(d => d.worldId === w.id);
     docs.forEach(function(d) {
       const row = document.createElement("div");
       row.style.padding = "4px 10px";
-      row.innerHTML = `<input type="checkbox" class="export-checkbox" data-id="${d.id}" checked> <span>${d.icon || '📄'} ${escapeHtml(d.title || '無標題')}</span>`;
+      row.innerHTML = `<input type="checkbox" class="export-checkbox" data-id="${d.id}" checked> <span>${escapeHtml(d.icon || '📄')} ${escapeHtml(d.title || '無標題')}</span>`;
       container.appendChild(row);
     });
   });
@@ -1950,6 +2072,9 @@ function importFromJSON(text) {
     appData = data;
     if (!appData.colorPalette) appData.colorPalette = Object.assign({}, DEFAULT_PALETTES);
     if (!appData.tagSettings) appData.tagSettings = {};
+    if (!appData.trash || typeof appData.trash !== "object") appData.trash = { docs: [], folders: [] };
+    if (!Array.isArray(appData.trash.docs)) appData.trash.docs = [];
+    if (!Array.isArray(appData.trash.folders)) appData.trash.folders = [];
     saveData();
     location.reload();
     return;
