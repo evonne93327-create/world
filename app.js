@@ -297,6 +297,8 @@ function renderSidebarTree() {
   const search = document.getElementById("searchInput").value.trim().toLowerCase();
   container.innerHTML = "";
 
+  renderBreadcrumb();
+
   const currentWorld = appData.worldviews.find(w => w.id === activeWorldId);
   if (!currentWorld) return;
 
@@ -556,11 +558,17 @@ function renderBreadcrumb() {
     };
     bar.appendChild(sep);
 
-    bar.appendChild(createBreadcrumbDropdownItem(
+    const folderItemEl = createBreadcrumbDropdownItem(
       (folder.icon || '📁') + " " + folder.name,
       function() { navigateToBreadcrumbFolder(folder); },
       getWorldChildOptions(folder.worldId, folder.id)
-    ));
+    );
+    folderItemEl.ondblclick = function(e) {
+      e.stopPropagation();
+      openSidebarMenu();
+      navigateToBreadcrumbFolder(folder);
+    };
+    bar.appendChild(folderItemEl);
   });
 
   const sepDoc = document.createElement("span");
