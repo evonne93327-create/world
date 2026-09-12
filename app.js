@@ -939,6 +939,184 @@ function jumpToLine(lineIndex) {
   closeQuickJumpPanel();
 }
 
+/* ==========================================================
+   6.6 Hashtag 篩選（搜尋欄旁的 🏷️ 按鈕：依顏色分類篩選，
+       列出標籤本人／行數／文章標題，點擊可直接跳轉）
+   ========================================================== */
+let hashtagFilterActiveColor = null; // null = 顯示全部顏色
+
+function openHashtagFilterModal() {
+  hashtagFilterActiveColor = null;
+  renderHashtagFilterModal();
+  document.getElementById("hashtagFilterModal").classList.add("active");
+}
+
+function closeHashtagFilterModal() {
+  document.getElementById("hashtagFilterModal").classList.remove("active");
+}
+
+function renderHashtagFilterModal() {
+  renderHashtagFilterColorChips();
+  renderHashtagFilterList();
+}
+
+function renderHashtagFilterColorChips() {
+  const wrap = document.getElementById("hashtagFilterColors");
+  wrap.innerHTML = "";
+
+  const allChip = document.createElement("div");
+  allChip.className = "hashtag-filter-color-chip" + (hashtagFilterActiveColor === null ? " active" : "");
+  allChip.innerHTML = '<span class="hashtag-filter-color-dot" style="background:linear-gradient(135deg,#bbb,#888);"></span><span>全部</span>';
+  allChip.onclick = function() {
+    hashtagFilterActiveColor = null;
+    renderHashtagFilterModal();
+  };
+  wrap.appendChild(allChip);
+
+  Object.keys(appData.colorPalette).forEach(function(colorId) {
+    const palette = appData.colorPalette[colorId] || DEFAULT_PALETTES.c_gray;
+    const chip = document.createElement("div");
+    chip.className = "hashtag-filter-color-chip" + (hashtagFilterActiveColor === colorId ? " active" : "");
+    chip.innerHTML =
+      '<span class="hashtag-filter-color-dot" style="background:' + palette.bg + '; border:1px solid ' + palette.text + '55;"></span>' +
+      '<span>' + escapeHtml(palette.name || colorId) + '</span>';
+    chip.onclick = function() {
+      hashtagFilterActiveColor = colorId;
+      renderHashtagFilterModal();
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function collectHashtagOccurrences(colorFilter) {
+  const results = [];
+  const docsInWorld = appData.docs.filter(d => d.worldId === activeWorldId);
+
+  docsInWorld.forEach(function(doc) {
+    const lines = (doc.content || "").split("\n");
+    const seenTags = {};
+
+    lines.forEach(function(line, idx) {
+      const tagRegex = /#([^\s#]+)/g;
+      let m;
+      while ((m = tagRegex.exec(line)) !== null) {
+        const tagName = m[1].trim();
+        if (!tagName || tagName.startsWith("第")) continue;
+        const colorId = appData.tagSettings[tagName] || "c_gray";
+        if (colorFilter && colorId !== colorFilter) continue;
+        seenTags[tagName] = true;
+        results.push({
+          tag: tagName,
+          colorId: colorId,
+          lineIndex: idx,
+          docId: doc.id,
+          docTitle: doc.title || "無標題文檔"
+        });
+      }
+    });
+
+    // 手動加入、內文中沒有對應文字的標籤，仍列出但無行數可跳轉（跳轉至文檔開頭）
+    (doc.manualTags || []).forEach(function(tagName) {
+      if (seenTags[tagName]) return;
+      const colorId = appData.tagSettings[tagName] || "c_gray";
+      if (colorFilter && colorId !== colorFilter) return;
+      results.push({
+        tag: tagName,
+        colorId: colorId,
+        lineIndex: null,
+        docId: doc.id,
+        docTitle: doc.title || "無標題文檔"
+      });
+    });
+  });
+
+  results.sort(function(a, b) {
+    if (a.docTitle !== b.docTitle) return a.docTitle.localeCompare(b.docTitle, 'zh-Hant');
+    const la = a.lineIndex === null ? Infinity : a.lineIndex;
+    const lb = b.lineIndex === null ? Infinity : b.lineIndex;
+    return la - lb;
+  });
+
+  return results;
+}
+
+function renderHashtagFilterList() {
+  const list = document.getElementById("hashtagFilterList");
+  list.innerHTML = "";
+
+  const results = collectHashtagOccurrences(hashtagFilterActiveColor);
+
+  if (results.length === 0) {
+    list.innerHTML = '<div class="hashtag-filter-empty">目前世界觀中尚未找到符合條件的 Hashtag</div>';
+    return;
+  }
+
+  results.forEach(function(item) {
+    const palette = appData.colorPalette[item.colorId] || DEFAULT_PALETTES.c_gray;
+
+    const row = document.createElement("div");
+    row.className = "hashtag-filter-item";
+
+    const dot = document.createElement("span");
+    dot.className = "hashtag-filter-color-dot";
+    dot.style.background = palette.bg;
+    dot.style.border = "1px solid " + palette.text + "55";
+
+    const tagSpan = document.createElement("span");
+    tagSpan.className = "hashtag-filter-item-tag";
+    tagSpan.style.color = palette.text;
+    tagSpan.textContent = "#" + item.tag;
+
+    const lineSpan = document.createElement("span");
+    lineSpan.className = "hashtag-filter-item-line";
+    lineSpan.textContent = item.lineIndex === null ? "手動標籤" : ("L" + (item.lineIndex + 1));
+
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "hashtag-filter-item-title";
+    titleSpan.textContent = item.docTitle;
+
+    row.appendChild(dot);
+    row.appendChild(tagSpan);
+    row.appendChild(lineSpan);
+    row.appendChild(titleSpan);
+
+    row.onclick = function() {
+      jumpToHashtagOccurrence(item.docId, item.lineIndex);
+    };
+
+    list.appendChild(row);
+  });
+}
+
+function jumpToHashtagOccurrence(docId, lineIndex) {
+  closeHashtagFilterModal();
+  const doc = appData.docs.find(d => d.id === docId);
+  if (!doc) return;
+
+  // 展開所在資料夾鏈，確保目錄樹能顯示該文檔
+  if (doc.folderId) {
+    let curId = doc.folderId;
+    const guard = new Set();
+    while (curId && !guard.has(curId)) {
+      guard.add(curId);
+      collapsedFolders[curId] = false;
+      const f = appData.folders.find(x => x.id === curId);
+      curId = f ? f.parentId : null;
+    }
+  }
+
+  activeFolderId = doc.folderId || null;
+  loadDocToEditor(docId);
+  if (activeView !== 'editor') switchView('editor');
+  renderSidebarTree();
+
+  if (lineIndex !== null) {
+    setTimeout(function() { jumpToLine(lineIndex); }, 0);
+  }
+
+  if (window.innerWidth <= 768) closeSidebarMobile();
+}
+
 function renderLiveHashtags(tags) {
   const bar = document.getElementById("liveTagToolbar");
   bar.innerHTML = "";
