@@ -332,8 +332,10 @@ function renderFolderLevel(worldId, parentId, parentElement, search) {
     folderRow.innerHTML = 
       '<div class="node-left">' +
         caretHtml +
-        '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
-        '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
+        '<span class="node-select-box">' +
+          '<span class="node-icon">' + (folder.icon || '📁') + '</span>' +
+          '<span class="node-name">' + escapeHtml(folder.name) + '</span>' +
+        '</span>' +
       '</div>';
 
     const iconSpan = folderRow.querySelector('.node-icon');
@@ -464,8 +466,10 @@ function createDocRowElement(doc) {
   row.innerHTML = 
     '<div class="node-left">' +
       '<span class="folder-caret" style="visibility:hidden; pointer-events:none;"></span>' +
-      '<span class="node-icon">' + (doc.icon || '📄') + '</span>' +
-      '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
+      '<span class="node-select-box">' +
+        '<span class="node-icon">' + (doc.icon || '📄') + '</span>' +
+        '<span class="node-name">' + escapeHtml(displayTitle) + '</span>' +
+      '</span>' +
     '</div>' +
     '<div style="font-size:10px; color:var(--text-muted);">' + (doc.wordCount || 0) + '字</div>';
 
