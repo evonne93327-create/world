@@ -262,20 +262,13 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // Ctrl+F：聚焦到目錄搜尋欄，取代瀏覽器內建的「頁面搜尋」
+    // Ctrl+F：聚焦到目錄搜尋欄，取代瀏覽器內建的「頁面搜尋」；若目錄欄是收合／關閉的，先自動展開
     if (key === "f") {
       e.preventDefault();
       const searchInput = document.getElementById("searchInput");
       if (!searchInput) return;
 
-      if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById("appSidebar");
-        if (sidebar && !sidebar.classList.contains("drawer-open")) {
-          sidebar.classList.add("drawer-open");
-          document.getElementById("sidebarOverlay").classList.add("active");
-          history.pushState({ drawer: true }, "");
-        }
-      }
+      openSidebarMenu(); // 桌面版會移除 collapsed、手機版會打開 drawer，兩種情況都涵蓋
       searchInput.focus();
       searchInput.select();
     }
