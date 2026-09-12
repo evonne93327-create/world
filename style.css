@@ -452,20 +452,16 @@ main.content-workspace {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   padding: 12px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   width: 100%;
+  flex-shrink: 0;
 }
 .meta-top-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
 }
-.meta-bottom-section { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.meta-bottom-section { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin-bottom: 4px; }
 
 .breadcrumb-row {
   display: flex;
