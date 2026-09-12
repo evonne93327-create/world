@@ -98,6 +98,26 @@ if (saved) {
   } catch (e) { console.error(e); }
 }
 
+/* 資料遷移：補上 manualTags 欄位。
+   規則：若既有 tags 中的某個標籤實際上沒有出現在內文裡，
+   代表它是透過「＋標籤」手動加入的，遷移時歸類為 manualTags 予以保留；
+   其餘則視為內文偵測產生，之後會隨內文增減即時同步。 */
+function computeManualTagsFor(content, tags) {
+  const existingTags = Array.isArray(tags) ? tags : [];
+  return existingTags.filter(function(t) {
+    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('#' + escaped + '(?=[\\s#]|$)');
+    return !re.test(content || "");
+  });
+}
+
+(function migrateDocTags() {
+  (appData.docs || []).forEach(function(d) {
+    if (Array.isArray(d.manualTags)) return;
+    d.manualTags = computeManualTagsFor(d.content, d.tags);
+  });
+})();
+
 function saveData() {
   localStorage.setItem("novel_multi_world_data_v5", JSON.stringify(appData));
 }
@@ -734,18 +754,25 @@ function onContentChange() {
   doc.wordCount = wordCount;
   document.getElementById("statWordCount").textContent = wordCount;
 
-  const foundTags = (doc.tags || []).slice();
+  if (!Array.isArray(doc.manualTags)) doc.manualTags = [];
+  const textTags = [];
   const regex = /#([^\s#]+)/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
     const t = match[1].trim();
-    if (!t.startsWith("第") && !foundTags.includes(t)) {
-      foundTags.push(t);
+    if (t && !t.startsWith("第") && !textTags.includes(t)) {
+      textTags.push(t);
     }
   }
-  doc.tags = foundTags;
+  // Hashtag 即時同步：內文新增或刪除 # 標籤時，標籤列表要即時跟著增加或減少，
+  // 不能只增不減；透過「＋標籤」手動加入、未寫在內文中的標籤則予以保留。
+  const mergedTags = textTags.slice();
+  doc.manualTags.forEach(function(t) {
+    if (!mergedTags.includes(t)) mergedTags.push(t);
+  });
+  doc.tags = mergedTags;
 
-  foundTags.forEach(function(t) {
+  doc.tags.forEach(function(t) {
     if (!appData.tagSettings[t]) appData.tagSettings[t] = "c_gray";
   });
 
@@ -947,12 +974,14 @@ function renderLiveHashtags(tags) {
       const doc = appData.docs.find(d => d.id === activeDocId);
       if (doc) {
         if (!doc.tags) doc.tags = [];
+        if (!Array.isArray(doc.manualTags)) doc.manualTags = [];
         rawTags.forEach(function(item) {
           const clean = item.trim().replace(/^#/, '');
-          if (clean && !doc.tags.includes(clean)) {
-            doc.tags.push(clean);
-            if (!appData.tagSettings[clean]) appData.tagSettings[clean] = "c_gray";
-          }
+          if (!clean) return;
+          if (!doc.tags.includes(clean)) doc.tags.push(clean);
+          // 手動加入的標籤即使之後內文沒有對應文字，也要保留，不會被即時同步機制移除
+          if (!doc.manualTags.includes(clean)) doc.manualTags.push(clean);
+          if (!appData.tagSettings[clean]) appData.tagSettings[clean] = "c_gray";
         });
         saveData();
         renderLiveHashtags(doc.tags);
@@ -1013,6 +1042,7 @@ function createNewDoc(targetFolderId = null, worldId = null) {
     title: "",
     content: "",
     tags: [],
+    manualTags: [],
     images: [],
     wordCount: 0,
     updatedAt: formatTime(new Date())
@@ -1810,6 +1840,7 @@ function importDocsArray(docsArray) {
       title: d.title || "匯入文檔",
       content: d.content || "",
       tags: Array.isArray(d.tags) ? d.tags : [],
+      manualTags: computeManualTagsFor(d.content, d.tags),
       images: Array.isArray(d.images) ? d.images : [],
       wordCount: (d.content || "").length,
       updatedAt: formatTime(new Date())
