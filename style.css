@@ -282,6 +282,19 @@ aside.sidebar-directory.collapsed {
   padding: 6px 8px;
 }
 
+.search-pin-wrap {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.search-pin-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+  margin: 2px 4px 4px;
+}
+
 .directory-footer {
   padding: 8px 12px;
   border-top: 1px solid var(--border);
@@ -572,6 +585,8 @@ main.content-workspace {
 .action-pill-btn:hover { background: var(--bg-sunken); }
 .action-pill-btn.btn-danger-pill { color: var(--danger); border-color: var(--danger-light); }
 .action-pill-btn.btn-danger-pill:hover { background: var(--danger-light); }
+.action-pill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.action-pill-btn:disabled:hover { background: var(--bg-card); }
 
 .editor-content-area {
   flex: 1;
@@ -882,6 +897,46 @@ main.content-workspace {
   color: var(--text-muted);
   text-align: center;
   padding: 20px 0;
+}
+
+/* 垃圾桶 */
+.trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.trash-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+.trash-item:hover { background: var(--bg-sunken); }
+.trash-item-icon { flex-shrink: 0; }
+.trash-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.trash-item-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.trash-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 /* 自訂右鍵選單 */
