@@ -698,6 +698,7 @@ function loadDocToEditor(docId) {
   renderLiveHashtags(doc.tags || []);
   renderDocImages(doc.images || []);
   renderSidebarTree();
+  closeQuickJumpPanel();
 }
 
 function onTitleChange() {
@@ -709,6 +710,10 @@ function onTitleChange() {
   saveData();
   renderSidebarTree();
   renderBreadcrumb();
+  if (document.getElementById("quickJumpPanel").classList.contains("active")) {
+    document.getElementById("quickJumpDocTitle").textContent = doc.title || "未命名文檔";
+    document.getElementById("quickJumpUpdatedAt").textContent = doc.updatedAt || "--";
+  }
 }
 
 function onContentChange() {
@@ -752,6 +757,11 @@ function onContentChange() {
   renderTOC(text);
   renderLiveHashtags(doc.tags);
   renderSidebarTree();
+  if (document.getElementById("quickJumpPanel").classList.contains("active")) {
+    renderQuickJumpList(text);
+    document.getElementById("quickJumpWordCount").textContent = wordCount;
+    document.getElementById("quickJumpUpdatedAt").textContent = doc.updatedAt;
+  }
 }
 
 function renderTOC(content) {
@@ -793,6 +803,107 @@ function renderTOC(content) {
     };
     container.appendChild(chip);
   });
+}
+
+/* ==========================================================
+   6.5 章節 / Hashtag 快速跳轉側邊欄
+   ========================================================== */
+function toggleQuickJumpPanel() {
+  const panel = document.getElementById("quickJumpPanel");
+  if (panel.classList.contains("active")) {
+    closeQuickJumpPanel();
+  } else {
+    openQuickJumpPanel();
+  }
+}
+
+function openQuickJumpPanel() {
+  const doc = appData.docs.find(d => d.id === activeDocId);
+  document.getElementById("quickJumpDocTitle").textContent = (doc && doc.title) ? doc.title : "未命名文檔";
+  document.getElementById("quickJumpWordCount").textContent = doc ? (doc.wordCount || 0) : 0;
+  document.getElementById("quickJumpUpdatedAt").textContent = doc ? (doc.updatedAt || "--") : "--";
+  renderQuickJumpList(doc ? (doc.content || "") : "");
+  document.getElementById("quickJumpPanel").classList.add("active");
+  document.getElementById("quickJumpOverlay").classList.add("active");
+}
+
+function closeQuickJumpPanel() {
+  document.getElementById("quickJumpPanel").classList.remove("active");
+  document.getElementById("quickJumpOverlay").classList.remove("active");
+}
+
+function renderQuickJumpList(content) {
+  const list = document.getElementById("quickJumpList");
+  list.innerHTML = "";
+
+  const lines = content.split("\n");
+  const entries = [];
+
+  lines.forEach(function(line, idx) {
+    const trimmed = line.trim();
+    if (/^#\s+(.+)/.test(trimmed)) {
+      entries.push({ type: 'chapter', label: trimmed.replace(/^#\s+/, ''), lineIndex: idx });
+    } else if (/^(第[0-9一二三四五六七八九十百]+[章回卷節]|Chapter\s+[0-9]+)/i.test(trimmed)) {
+      entries.push({ type: 'chapter', label: trimmed.substring(0, 30), lineIndex: idx });
+    }
+
+    const tagRegex = /#([^\s#]+)/g;
+    let m;
+    while ((m = tagRegex.exec(line)) !== null) {
+      const tagName = m[1].trim();
+      if (!tagName || tagName.startsWith("第")) continue;
+      entries.push({ type: 'tag', label: tagName, lineIndex: idx });
+    }
+  });
+
+  entries.sort(function(a, b) { return a.lineIndex - b.lineIndex; });
+
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="quickjump-empty">尚未偵測到章節標題或 Hashtag<br>試試輸入「# 第一章 標題」或「#標籤」</div>';
+    return;
+  }
+
+  entries.forEach(function(entry) {
+    const row = document.createElement("div");
+    row.className = "quickjump-item" + (entry.type === 'tag' ? ' is-tag' : '');
+
+    const lineBadge = document.createElement("span");
+    lineBadge.className = "quickjump-item-line";
+    lineBadge.textContent = "L" + (entry.lineIndex + 1);
+
+    const icon = document.createElement("span");
+    icon.className = "quickjump-item-icon";
+    icon.textContent = entry.type === 'chapter' ? '📍' : '#';
+
+    const label = document.createElement("span");
+    label.className = "quickjump-item-label";
+    label.textContent = entry.label;
+
+    row.appendChild(lineBadge);
+    row.appendChild(icon);
+    row.appendChild(label);
+
+    row.onclick = function() { jumpToLine(entry.lineIndex); };
+
+    list.appendChild(row);
+  });
+}
+
+function jumpToLine(lineIndex) {
+  const textarea = document.getElementById("docContentInput");
+  const lines = textarea.value.split("\n");
+  let pos = 0;
+  for (let i = 0; i < lineIndex && i < lines.length; i++) {
+    pos += lines[i].length + 1;
+  }
+  const lineLength = (lines[lineIndex] || "").length;
+
+  textarea.focus();
+  textarea.setSelectionRange(pos, pos + lineLength);
+  const percent = pos / Math.max(1, textarea.value.length);
+  textarea.scrollTop = (textarea.scrollHeight - textarea.clientHeight) * percent;
+
+  closeQuickJumpPanel();
 }
 
 function renderLiveHashtags(tags) {
