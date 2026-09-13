@@ -599,16 +599,10 @@ main.content-workspace {
   flex-direction: column;
   gap: 12px;
 }
-.content-textarea-wrap {
-  position: relative;
-  flex: 1;
-  display: flex;
-  min-height: 400px;
-}
 .content-textarea {
   flex: 1;
   width: 100%;
-  min-height: 0;
+  min-height: 400px;
   border: none !important;
   outline: none !important;
   resize: none;
@@ -618,35 +612,6 @@ main.content-workspace {
   font-family: var(--font-ui);
   background: transparent;
 }
-.content-undo-redo-group {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  display: flex;
-  gap: 6px;
-  z-index: 5;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-}
-.content-undo-redo-btn {
-  border: none;
-  background: transparent;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
-}
-.content-undo-redo-btn:hover { background: var(--bg-sunken); }
-.content-undo-redo-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.content-undo-redo-btn:disabled:hover { background: transparent; }
 .toc-card {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
@@ -1212,8 +1177,7 @@ main.content-workspace {
   .action-pill-btn { padding: 9px 12px; }
 
   .doc-title-input { font-size: 19px; }
-  .content-textarea { font-size: 15px; line-height: 1.85; }
-  .content-textarea-wrap { min-height: 300px; }
+  .content-textarea { font-size: 15px; line-height: 1.85; min-height: 300px; }
 
   .ctx-menu {
     left: 0 !important;
@@ -1270,6 +1234,35 @@ main.content-workspace {
 }
 .quickjump-fab:hover { transform: scale(1.08); }
 .quickjump-fab:active { transform: scale(0.94); }
+
+/* 文章復原／取消復原：固定在視窗左下角，樣式呼應快速跳轉的浮動按鈕 */
+.undoredo-fab-group {
+  position: fixed;
+  left: 28px;
+  bottom: 28px;
+  display: flex;
+  gap: 10px;
+  z-index: 75;
+}
+.undoredo-fab-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.undoredo-fab-btn:hover { transform: scale(1.08); background: var(--bg-sunken); }
+.undoredo-fab-btn:active { transform: scale(0.94); }
+.undoredo-fab-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.undoredo-fab-btn:disabled:hover { transform: none; background: var(--bg-card); }
 
 .quickjump-overlay {
   position: fixed;
@@ -1345,6 +1338,8 @@ main.content-workspace {
 
 @media (max-width: 768px) {
   .quickjump-fab { bottom: calc(56px + var(--safe-b) + 16px); right: 16px; width: 44px; height: 44px; font-size: 18px; }
+  .undoredo-fab-group { bottom: calc(56px + var(--safe-b) + 16px); left: 16px; gap: 8px; }
+  .undoredo-fab-btn { width: 44px; height: 44px; font-size: 17px; }
 
   /* 手機版改為從按鈕右下角「彈出」的 Popover，並隱藏標題列叉叉（改由按鈕本身切換成 ✕ 關閉） */
   .quickjump-overlay { background: transparent; }
