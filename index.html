@@ -132,6 +132,11 @@
           <textarea id="docContentInput" class="content-textarea" placeholder="在此記錄設定、勢力、背景或法術細節...
 💡 章節標註：輸入「# 第一章 啟程」或「第1章」系統會自動在頂部生成快速跳轉按鈕。
 💡 標籤標註：輸入「#帝國軍方 #反抗勢力」系統會自動抽取並套色；點擊上方 Hashtag 名稱可直接定位到內文段落！" oninput="onContentChange()"></textarea>
+
+          <div class="undoredo-sticky-bar" id="undoRedoFabGroup">
+            <button class="undoredo-fab-btn" id="docUndoBtn" title="復原（上一步內文變更）" onclick="undoDocContent()" disabled>↩️</button>
+            <button class="undoredo-fab-btn" id="docRedoBtn" title="取消復原（下一步內文變更）" onclick="redoDocContent()" disabled>↪️</button>
+          </div>
         </div>
       </section>
 
@@ -151,12 +156,6 @@
   </div>
 
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebarMobile()"></div>
-
-  <!-- 文章復原／取消復原：固定在視窗左下角的浮動按鈕（跟快速跳轉按鈕一樣，不會隨內容捲動跑掉） -->
-  <div class="undoredo-fab-group" id="undoRedoFabGroup">
-    <button class="undoredo-fab-btn" id="docUndoBtn" title="復原（上一步內文變更）" onclick="undoDocContent()" disabled>↩️</button>
-    <button class="undoredo-fab-btn" id="docRedoBtn" title="取消復原（下一步內文變更）" onclick="redoDocContent()" disabled>↪️</button>
-  </div>
 
   <!-- 章節 / Hashtag 快速跳轉：浮動按鈕 + 側邊欄 -->
   <button class="quickjump-fab" id="quickJumpFab" title="章節 / Hashtag 快速跳轉" onclick="toggleQuickJumpPanel()">📑</button>
