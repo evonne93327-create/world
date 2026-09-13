@@ -14,7 +14,68 @@ const CHAPTER_LINE_REGEX = /^(第[0-9一二三四五六七八九十百]+[章回�
 const DOC_HISTORY_LIMIT = 5000;
 const HISTORY_SNAPSHOT_THROTTLE_MS = 1200;
 
-const INITIAL_APP_DATA = { /* ... 填入原本的 INITIAL_APP_DATA 內容 ... */ };
+const INITIAL_APP_DATA = {
+  colorPalette: Object.assign({}, DEFAULT_PALETTES),
+  tagSettings: {
+    "帝國軍方": "c_blue",
+    "反抗組織": "c_rose",
+    "主角群": "c_purple"
+  },
+  trash: { docs: [], folders: [] },
+  worldviews: [
+    {
+      id: "w_main",
+      name: "艾爾達斯主大陸",
+      icon: "🌍",
+      canvas: {
+        nodes: [
+          { id: "node_doc_1", docId: "doc_1", x: 40, y: 70 },
+          { id: "node_doc_2", docId: "doc_2", x: 280, y: 150 }
+        ],
+        edges: [
+          { id: "edge_1", source: "node_doc_1", target: "node_doc_2", label: "既敵對亦互相利用" }
+        ]
+      }
+    },
+    {
+      id: "w_sub",
+      name: "星界彼端 (外傳)",
+      icon: "🔮",
+      canvas: { nodes: [], edges: [] }
+    }
+  ],
+  folders: [
+    { id: "f_chars", worldId: "w_main", parentId: null, name: "核心角色群", icon: "👥" },
+    { id: "f_knights", worldId: "w_main", parentId: "f_chars", name: "皇家騎士階級", icon: "⚔️" },
+    { id: "f_lore", worldId: "w_main", parentId: null, name: "歷史年表", icon: "📜" }
+  ],
+  docs: [
+    {
+      id: "doc_1",
+      worldId: "w_main",
+      folderId: "f_knights",
+      icon: "🛡️",
+      title: "白銀騎士團長",
+      content: "# 第一章 誓約之劍\n性格嚴謹肅穆，掌管皇城近衛軍，手握秘銀軍令狀。 #帝國軍方 #主角群\n\n# 第二章 北境之戰\n於舊曆340年率軍抵禦霜雪巨獸，戰役極為慘烈。",
+      tags: ["帝國軍方", "主角群"],
+      images: [],
+      wordCount: 75,
+      updatedAt: "2026-09-09 12:00"
+    },
+    {
+      id: "doc_2",
+      worldId: "w_main",
+      folderId: "f_chars",
+      icon: "🗡️",
+      title: "暗夜遊俠",
+      content: "# 第一章 陰影交匯\n遊走在黑市與皇城外圍的情報商人，表面玩世不恭，實際上是反抗軍的先鋒探子。 #反抗組織 #主角群",
+      tags: ["反抗組織", "主角群"],
+      images: [],
+      wordCount: 52,
+      updatedAt: "2026-09-09 12:10"
+    }
+  ]
+};
 
 let appData = JSON.parse(JSON.stringify(INITIAL_APP_DATA));
 let activeWorldId = "w_main";
