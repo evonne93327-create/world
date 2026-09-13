@@ -600,9 +600,10 @@ main.content-workspace {
   gap: 12px;
 }
 .content-textarea {
-  flex: 1;
   width: 100%;
   min-height: 400px;
+  height: auto;
+  overflow-y: hidden; /* 內文不再自己捲動，統一交給外層 .editor-content-area 捲動（標題／內文同一個捲軸），高度由 JS 依內容自動撐開 */
   border: none !important;
   outline: none !important;
   resize: none;
@@ -1235,34 +1236,41 @@ main.content-workspace {
 .quickjump-fab:hover { transform: scale(1.08); }
 .quickjump-fab:active { transform: scale(0.94); }
 
-/* 文章復原／取消復原：固定在視窗左下角，樣式呼應快速跳轉的浮動按鈕 */
-.undoredo-fab-group {
-  position: fixed;
-  left: 28px;
-  bottom: 28px;
+/* 文章復原／取消復原：固定在「文檔輸入區」左下角（不是整個視窗），
+   用 position: sticky 讓它貼著 .editor-content-area 這個捲動容器的底部，
+   捲動內文時不會跟著跑掉，但水平位置永遠對齊文檔輸入區本身（自動避開側邊欄，不需要用 JS 算座標）。 */
+.undoredo-sticky-bar {
+  position: sticky;
+  bottom: 16px;
+  left: 0;
+  width: fit-content;
   display: flex;
   gap: 10px;
-  z-index: 75;
+  margin-top: 14px;
+  z-index: 5;
+  pointer-events: none; /* 讓外層透明區域不擋住底下文字的點擊，實際按鈕另外開啟 pointer-events */
 }
 .undoredo-fab-btn {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
-  font-size: 19px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  pointer-events: auto;
   transition: transform 0.2s ease, background 0.2s ease;
 }
 .undoredo-fab-btn:hover { transform: scale(1.08); background: var(--bg-sunken); }
 .undoredo-fab-btn:active { transform: scale(0.94); }
 .undoredo-fab-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 .undoredo-fab-btn:disabled:hover { transform: none; background: var(--bg-card); }
+
 
 .quickjump-overlay {
   position: fixed;
@@ -1338,8 +1346,7 @@ main.content-workspace {
 
 @media (max-width: 768px) {
   .quickjump-fab { bottom: calc(56px + var(--safe-b) + 16px); right: 16px; width: 44px; height: 44px; font-size: 18px; }
-  .undoredo-fab-group { bottom: calc(56px + var(--safe-b) + 16px); left: 16px; gap: 8px; }
-  .undoredo-fab-btn { width: 44px; height: 44px; font-size: 17px; }
+  .undoredo-fab-btn { width: 40px; height: 40px; font-size: 16px; }
 
   /* 手機版改為從按鈕右下角「彈出」的 Popover，並隱藏標題列叉叉（改由按鈕本身切換成 ✕ 關閉） */
   .quickjump-overlay { background: transparent; }
