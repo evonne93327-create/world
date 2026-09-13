@@ -126,7 +126,9 @@ let moveFolderTargetId = null;
 let connectingSourceNodeId = null;
 let collapsedFolders = {};
 let docHistory = {}; // docId -> { stack: [content, ...], index: n }（僅存於記憶體，重新整理頁面後會重置）
-const DOC_HISTORY_LIMIT = 100;
+// 復原堆疊的容量上限。特別拉高（而非常見的 50~100），是為了確保「回到這次打開視窗/文檔時的樣子」
+// 這個最早的快照（stack[0]）在一般長時間的編輯過程中，幾乎不會被擠出堆疊而失去復原能力。
+const DOC_HISTORY_LIMIT = 5000;
 
 const saved = localStorage.getItem("novel_multi_world_data_v5");
 if (saved) {
@@ -968,7 +970,9 @@ function pushHistorySnapshot(docId, content) {
   h.index = h.stack.length - 1;
 
   if (h.stack.length > DOC_HISTORY_LIMIT) {
-    h.stack.shift();
+    // stack[0] 是「打開這篇文檔當下」的基準快照，刻意保留、不淘汰，
+    // 這樣復原永遠可以一路回到最初打開視窗時的樣子；真的超過上限時，改成淘汰第二筆。
+    h.stack.splice(1, 1);
     h.index--;
   }
 
@@ -2322,6 +2326,7 @@ function switchView(view, pushHistory = true) {
   document.getElementById("editorView").style.display = (view === 'editor') ? 'flex' : 'none';
   document.getElementById("canvasView").style.display = (view === 'canvas') ? 'block' : 'none';
   document.getElementById("quickJumpFab").style.display = (view === 'editor') ? 'flex' : 'none';
+  document.getElementById("undoRedoFabGroup").style.display = (view === 'editor') ? 'flex' : 'none';
   if (view !== 'editor') closeQuickJumpPanel();
   if (view === 'canvas') {
     renderCanvas();
