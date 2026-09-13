@@ -186,6 +186,11 @@ window.addEventListener("DOMContentLoaded", function() {
   setupDeleteKeyShortcut();
   setupGlobalKeyboardShortcuts();
   setupHistoryNavigation();
+
+  // 側邊欄寬度、視窗寬度改變時，文字換行寬度也會變，需要重新計算內文框的自動撐高高度
+  window.addEventListener("resize", function() {
+    autoGrowTextarea(document.getElementById("docContentInput"));
+  });
 });
 
 function setupHistoryNavigation() {
@@ -294,6 +299,7 @@ function toggleSidebarMenu() {
   } else {
     sidebar.classList.toggle("collapsed");
   }
+  scheduleAutoGrowAfterLayoutShift();
 }
 
 function openSidebarMenu() {
@@ -310,6 +316,15 @@ function openSidebarMenu() {
   } else {
     sidebar.classList.remove("collapsed");
   }
+  scheduleAutoGrowAfterLayoutShift();
+}
+
+// 側邊欄展開/收合有 0.25s 的寬度過渡動畫，動畫結束後內文可用寬度才會定案，
+// 所以延遲重新計算一次自動撐高的高度，避免換行寬度算錯。
+function scheduleAutoGrowAfterLayoutShift() {
+  setTimeout(function() {
+    autoGrowTextarea(document.getElementById("docContentInput"));
+  }, 260);
 }
 
 function handleBreadcrumbDblClick(e) {
@@ -377,6 +392,7 @@ function clearEditorWorkspace() {
   document.getElementById("docIconBtn").textContent = "📄";
   document.getElementById("docTitleInput").value = "";
   document.getElementById("docContentInput").value = "";
+  autoGrowTextarea(document.getElementById("docContentInput"));
   document.getElementById("statWordCount").textContent = "0";
   document.getElementById("statUpdatedAt").textContent = "--";
   document.getElementById("liveTagToolbar").innerHTML = "";
@@ -841,6 +857,7 @@ function loadDocToEditor(docId) {
   document.getElementById("docContentInput").value = doc.content || "";
   document.getElementById("statWordCount").textContent = doc.wordCount || 0;
   document.getElementById("statUpdatedAt").textContent = doc.updatedAt || "--";
+  autoGrowTextarea(document.getElementById("docContentInput"));
 
   renderBreadcrumb();
   renderTOC(doc.content || "");
@@ -892,8 +909,10 @@ function onContentChange() {
   const doc = appData.docs.find(d => d.id === activeDocId);
   if (!doc) return;
 
-  const text = document.getElementById("docContentInput").value;
+  const textarea = document.getElementById("docContentInput");
+  const text = textarea.value;
   doc.content = text;
+  autoGrowTextarea(textarea);
 
   if (!document.getElementById("docTitleInput").value.trim()) {
     const firstLine = text.trim().split("\n")[0] || "";
@@ -916,8 +935,15 @@ function onContentChange() {
     document.getElementById("quickJumpUpdatedAt").textContent = doc.updatedAt;
   }
 
-  // 成本較高的存檔／整棵目錄樹重繪／復原快照：延遲到停止輸入後才執行，避免打字時卡頓
+  // 成本較高的存檔／整棵目錄樹重繪：延遲到停止輸入後才執行，避免打字時卡頓
   scheduleContentPersist(doc.id, text);
+}
+
+// 文字框高度依內容自動撐開，不再自己出現捲軸；整篇文檔（標題＋內文）統一由外層 .editor-content-area 捲動
+function autoGrowTextarea(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
 }
 
 /* 打字時的效能優化：saveData() 會序列化整個 appData（可能含圖片 base64），
@@ -926,26 +952,49 @@ function onContentChange() {
 let contentPersistTimer = null;
 let pendingPersistInfo = null; // { docId, text }：debounce 期間暫存的最新內容，供 flush 時補推一筆復原快照
 
+// 持續打字時，就算完全沒停下來，也讓 Ctrl+Z／復原按鈕可以「一段一段」往回復原，
+// 而不是打了老半天、一按復原就整段直接跳回最初的樣子：每隔一小段時間就額外記錄一筆快照。
+let historySnapshotTimer = null;
+const HISTORY_SNAPSHOT_THROTTLE_MS = 1200;
+
 function scheduleContentPersist(docId, text) {
   pendingPersistInfo = { docId: docId, text: text };
+
   if (contentPersistTimer) clearTimeout(contentPersistTimer);
   contentPersistTimer = setTimeout(function() {
     contentPersistTimer = null;
     flushPendingContentPersist();
   }, 400);
+
+  if (!historySnapshotTimer) {
+    historySnapshotTimer = setTimeout(function() {
+      historySnapshotTimer = null;
+      if (pendingPersistInfo) {
+        pushHistorySnapshot(pendingPersistInfo.docId, pendingPersistInfo.text);
+      }
+    }, HISTORY_SNAPSHOT_THROTTLE_MS);
+  }
 }
 
 function flushPendingContentPersist() {
+  const hadPending = !!contentPersistTimer || !!historySnapshotTimer;
+
   if (contentPersistTimer) {
     clearTimeout(contentPersistTimer);
     contentPersistTimer = null;
-    if (pendingPersistInfo) {
-      pushHistorySnapshot(pendingPersistInfo.docId, pendingPersistInfo.text);
-      pendingPersistInfo = null;
-    }
-    saveData();
-    renderSidebarTree();
   }
+  if (historySnapshotTimer) {
+    clearTimeout(historySnapshotTimer);
+    historySnapshotTimer = null;
+  }
+  if (!hadPending) return;
+
+  if (pendingPersistInfo) {
+    pushHistorySnapshot(pendingPersistInfo.docId, pendingPersistInfo.text);
+    pendingPersistInfo = null;
+  }
+  saveData();
+  renderSidebarTree();
 }
 
 /* ==========================================================
@@ -981,7 +1030,9 @@ function pushHistorySnapshot(docId, content) {
 
 function applyHistorySnapshot(doc, content) {
   doc.content = content;
-  document.getElementById("docContentInput").value = content;
+  const textarea = document.getElementById("docContentInput");
+  textarea.value = content;
+  autoGrowTextarea(textarea);
 
   recomputeDocFromContent(doc, content);
   doc.updatedAt = formatTime(new Date());
@@ -1036,6 +1087,7 @@ function updateUndoRedoButtons(docId) {
   undoBtn.disabled = !canUndo;
   redoBtn.disabled = !canRedo;
 }
+
 
 window.addEventListener("beforeunload", flushPendingContentPersist);
 
@@ -2326,11 +2378,12 @@ function switchView(view, pushHistory = true) {
   document.getElementById("editorView").style.display = (view === 'editor') ? 'flex' : 'none';
   document.getElementById("canvasView").style.display = (view === 'canvas') ? 'block' : 'none';
   document.getElementById("quickJumpFab").style.display = (view === 'editor') ? 'flex' : 'none';
-  document.getElementById("undoRedoFabGroup").style.display = (view === 'editor') ? 'flex' : 'none';
   if (view !== 'editor') closeQuickJumpPanel();
   if (view === 'canvas') {
     renderCanvas();
     if (pushHistory) history.pushState({ view: 'canvas' }, "");
+  } else {
+    autoGrowTextarea(document.getElementById("docContentInput"));
   }
 }
 
