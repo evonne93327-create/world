@@ -578,7 +578,9 @@ function buildWorldMenuItems(world) {
  { icon: "🎨", label: "更換圖示", action: function() { openIconPicker("world", world.id); } },
  { type: "divider" },
  { icon: "📁", label: "新增資料夾", action: function() { promptCreateFolder(null, world.id); } },
- { icon: "📄", label: "新增文檔", action: function() { createNewDoc(null, world.id); } }
+ { icon: "📄", label: "新增文檔", action: function() { createNewDoc(null, world.id); } },
+ { type: "divider" },
+ { icon: "🗑️", label: "刪除世界觀", danger: true, action: function() { deleteWorldById(world.id); } }
  ];
 }
 
