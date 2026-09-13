@@ -1,14 +1,191 @@
-function formatTime(d) { /* 原本的 formatTime 實作 */ }
-function escapeHtml(str) { /* 原本的 escapeHtml 實作 */ }
-function switchView(view, pushHistory = true) { /* 原本的 switchView 實作 */ }
-function toggleSidebarMenu() { /* 原本的 toggleSidebarMenu 實作 */ }
-function openSidebarMenu() { /* 原本的 openSidebarMenu 實作 */ }
-function closeSidebarMobile() { /* 原本的 closeSidebarMobile 實作 */ }
-function scheduleAutoGrowAfterLayoutShift() { /* 原本的 scheduleAutoGrowAfterLayoutShift 實作 */ }
-function handleBreadcrumbDblClick(e) { /* 原本的 handleBreadcrumbDblClick 實作 */ }
-function updateWorldBadge() { /* 原本的 updateWorldBadge 實作 */ }
+/* ==========================================================
+   核心與通用工具 (main.js)
+   ========================================================== */
 
-function setupHistoryNavigation() { /* 原本的 setupHistoryNavigation 實作 */ }
-function setupDeleteKeyShortcut() { /* 原本的 setupDeleteKeyShortcut 實作 */ }
-function setupGlobalKeyboardShortcuts() { /* 原本的 setupGlobalKeyboardShortcuts 實作 */ }
-function setupGlobalClickDismiss() { /* 原本的 setupGlobalClickDismiss 實作 */ }
+// 1. 格式化時間工具
+function formatTime(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return y + "-" + m + "-" + day + " " + h + ":" + min;
+}
+
+// 2. 核心防禦：跳脫 HTML 字元（就是這個變成 undefined 導致畫面出錯）
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// 3. 畫面切換 (編輯器 / 白板)
+function switchView(view, pushHistory = true) {
+  activeView = view;
+  document.getElementById("tabEditorBtn").classList.toggle("active", view === 'editor');
+  document.getElementById("tabCanvasBtn").classList.toggle("active", view === 'canvas');
+  document.getElementById("editorView").style.display = (view === 'editor') ? 'flex' : 'none';
+  document.getElementById("canvasView").style.display = (view === 'canvas') ? 'block' : 'none';
+  document.getElementById("quickJumpFab").style.display = (view === 'editor') ? 'flex' : 'none';
+  if (view !== 'editor') closeQuickJumpPanel();
+  if (view === 'canvas') {
+    renderCanvas();
+    if (pushHistory) history.pushState({ view: 'canvas' }, "");
+  } else {
+    autoGrowTextarea(document.getElementById("docContentInput"));
+  }
+}
+
+// 4. 側邊欄開關控制
+function toggleSidebarMenu() {
+  const isMobile = window.innerWidth <= 768;
+  const sidebar = document.getElementById("appSidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+
+  if (isMobile) {
+    const isOpen = sidebar.classList.contains("drawer-open");
+    if (isOpen) {
+      closeSidebarMobile();
+    } else {
+      sidebar.classList.add("drawer-open");
+      overlay.classList.add("active");
+      history.pushState({ drawer: true }, "");
+    }
+  } else {
+    sidebar.classList.toggle("collapsed");
+  }
+  scheduleAutoGrowAfterLayoutShift();
+}
+
+function openSidebarMenu() {
+  const isMobile = window.innerWidth <= 768;
+  const sidebar = document.getElementById("appSidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+
+  if (isMobile) {
+    if (!sidebar.classList.contains("drawer-open")) {
+      sidebar.classList.add("drawer-open");
+      overlay.classList.add("active");
+      history.pushState({ drawer: true }, "");
+    }
+  } else {
+    sidebar.classList.remove("collapsed");
+  }
+  scheduleAutoGrowAfterLayoutShift();
+}
+
+function closeSidebarMobile() {
+  document.getElementById("appSidebar").classList.remove("drawer-open");
+  document.getElementById("sidebarOverlay").classList.remove("active");
+}
+
+function scheduleAutoGrowAfterLayoutShift() {
+  setTimeout(function() {
+    autoGrowTextarea(document.getElementById("docContentInput"));
+  }, 260);
+}
+
+function handleBreadcrumbDblClick(e) {
+  if (e.target.closest('.breadcrumb-item')) return;
+  openSidebarMenu();
+}
+
+// 5. 瀏覽器歷史紀錄整合（支援手機版手勢返回）
+function setupHistoryNavigation() {
+  if (!history.state) {
+    history.replaceState({ view: 'editor', drawer: false }, "");
+  }
+
+  window.addEventListener("popstate", function(e) {
+    const sidebar = document.getElementById("appSidebar");
+    const isDrawerOpen = sidebar && sidebar.classList.contains("drawer-open");
+
+    if (isDrawerOpen) {
+      closeSidebarMobile();
+      return;
+    }
+
+    if (activeView === 'canvas') {
+      switchView('editor', false);
+      return;
+    }
+
+    const activeModal = document.querySelector(".modal-overlay.active");
+    if (activeModal) {
+      activeModal.classList.remove("active");
+      return;
+    }
+  });
+}
+
+// 6. 快捷鍵設定
+function setupDeleteKeyShortcut() {
+  document.addEventListener("keydown", function(e) {
+    if (e.key !== "Delete") return;
+
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+    if (isBatchDeleteMode) return;
+
+    if (activeFolderId) {
+      deleteFolderById(activeFolderId);
+    } else if (activeDocId) {
+      deleteCurrentDocument();
+    }
+  });
+}
+
+function setupGlobalKeyboardShortcuts() {
+  document.addEventListener("keydown", function(e) {
+    const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+    const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+    if (!cmdKey) return;
+
+    const key = e.key.toLowerCase();
+    const activeEl = document.activeElement;
+    const inContentEditor = !!activeEl && activeEl.id === "docContentInput";
+
+    // Ctrl+Z：復原
+    if (key === "z" && !e.shiftKey) {
+      if (inContentEditor) {
+        e.preventDefault();
+        undoDocContent();
+      }
+      return;
+    }
+
+    // Ctrl+Y：取消復原
+    if (key === "y") {
+      if (inContentEditor) {
+        e.preventDefault();
+        redoDocContent();
+      }
+      return;
+    }
+
+    // Ctrl+F：全域搜尋
+    if (key === "f") {
+      e.preventDefault();
+      const searchInput = document.getElementById("searchInput");
+      if (!searchInput) return;
+
+      openSidebarMenu();
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
+}
+
+// 7. 點擊空白處自動關閉彈出式選單
+function setupGlobalClickDismiss() {
+  document.addEventListener("click", function(e) {
+    const popover = document.getElementById("colorPickerPopover");
+    if (popover && popover.classList.contains("active") && !popover.contains(e.target)) {
+      popover.classList.remove("active");
+    }
+    if (!e.target.closest('.breadcrumb-item')) {
+      if (typeof closeAllBreadcrumbDropdowns === 'function') {
+        closeAllBreadcrumbDropdowns();
+      }
+    }
+  });
+}
